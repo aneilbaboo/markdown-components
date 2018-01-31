@@ -1,9 +1,9 @@
 {
-  "name": "component-markdown",
+  "name": "markdown-components",
   "version": "0.0.1",
-  "description": "Markdown parser with powerful custom tags",
+  "description": "Add user-safe, React-like components to your favorite markdown engine",
   "main": "index.js",
-  "repository": "aneilbaboo/component-markdown",
+  "repository": "aneilbaboo/markdown-components",
   "author": "Aneil Mallavarapu",
   "license": "MIT",
   "scripts": {
