@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "Markdown parser with powerful custom tags",
   "main": "index.js",
+  "repository": "aneilbaboo/component-markdown",
   "author": "Aneil Mallavarapu",
   "license": "MIT",
   "scripts": {
