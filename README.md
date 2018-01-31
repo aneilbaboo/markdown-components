@@ -1,6 +1,6 @@
 # markdown-components
 
-Add custom React-like components to your Markdown which are safe for end-users. The goal is to enable developers to create rich document editing creation systems for their users. It's designed to bolt on to any Markdown engine with a simple wrapper function.
+Add React-like components to your Markdown. The goal is to allow developers to enhance Markdown which can be safely used by end-users. It's designed to bolt on to any Markdown engine with a simple wrapper function.
 
 ```html
 <MyComponent a=1 b="hello" c={ a.b }>
@@ -15,7 +15,7 @@ Add custom React-like components to your Markdown which are safe for end-users. 
 
 ## Rationale
 
-This approach is different from JSX-markdown packages, which are intended for _developers_, enabling them to write Markdown syntax in their code instead of raw HTML elements. These libraries aren't suitable for use by end-users because React interpolation expressions are full Turing-complete Javascript. Producing HTML would require eval'ing user-generated content either on the server or another user's browser, introducing a security hole.
+This approach is different from JSX-markdown packages, which are intended for _developers_, enabling writing Markdown syntax in code instead of raw HTML elements. These libraries aren't suitable for use by end-users because React interpolation expressions are full on Javascript. I.e., you'd need to eval user-generated javascript either on your server or another user's browser. :/
 
 In this package, interpolation expressions, like `c={ a.b }` in the fragment above, are not evaluated, so there is no script injection vulnerability. 
 
@@ -167,5 +167,35 @@ Because the component has responsibility for rendering `__children`, you can man
 
 An optional function which returns a value given the context and an accessor expression (the value contained between the braces in `#{...}`):
 
-The default interpolator has behavior similar to lodash's get. 
+The default interpolator has behavior similar to lodash's get. It safely traverses object using a dot-separated accessor.
 
+For example, given a context of `{ a: {b: 9 }}`, `{ a.b }` provides an interpolated value of `9`, and `{ x.y.z }` is `undefined`.
+
+```javascript
+function myInterpolator(context, accessor) {
+  return context[accessor];
+}
+
+toHTML({
+  interpolator: myInterpolator,
+  ...
+});
+```
+
+### Markdown Engine
+
+You'll need to install a Markdown interpreter and write a wrapper function.  You'll provide this to either the `Renderer` constructor or `toHTML` function:
+
+```javascript
+var MarkdownIt = require('markdown-it');
+var markdown = new MarkdownIt();
+
+var markdownItEngine = function (mdText, render) {
+  render(markdown.render(mdText)); 
+};
+
+var html = toHTML({
+  markdownEngine: markdownItEngine,
+  ...
+});
+```
