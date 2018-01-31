@@ -123,32 +123,46 @@ console.log(stream.toString()); // outputs the HTML
 
 ### Components
 
-The `Renderer` and `toHTML` take an argument components. It is an object where keys represent case insensitive component names, and the values are functions which are responsible for rendering HTML. They have the form:
+Components are functions which render HTML.  They're provided to the `Renderer` constructor and the `toHTML` as an Object where the keys are the component names, and the values are a function which takes attributes and a rendering function as arguments:
 
 ```javascript
+// example component function:
 function ({__name, __children, ...attrs}, render) {
-  // the body of the function generates 
-  // whatever HTML you need:
+  // generate custom HTML:
   render(`<div>`);
-  render(__children); // don't forget to render any internal elements
+  render(__children); // render elements between start and end tag
   render(`</div>`);
 }
 ```
-The first argument is an Object containing attribute values passed 
 
-`attrs` any key value pairs representing the components attributes passed in the markup and potentially interpolated from the context
+The first argument is an Object containing attribute values passed in the markup, plus a couple of special keys:
+
+`attrs` interpolatd key value pairs passed in the markup
 `__name` name of the tag
-`__children` array of Objects representing elements between the open and close tags, of the form:
+`__children` array of Objects representing elements between the open and close tags, having the form:
+
 ```javascript
 {
   type: string, // "tag", "text", or "script" 
   name: string, // name of the tag
-  attrs: Object, // attributes passed to this component
-  data: string, //
+  attribs: Object, // attributes passed to this component
   children: array // array of objects like this
 }
 ```
-  
+
+#### Higher Order Components
+
+Because the component has responsibility for rendering `__children`, you can manipulate child elements at render time, choosing to ignore, rewrite or reorder them. For example, you could create elements that provide switch/case/default semantics:
+
+```html
+# Your Results
+<Switch value=#{user.score}>
+<Case value="A">You did _great_!</Case>
+<Case value="B">Well done</Case>
+<Default>Better luck next time</Default>
+</Switch>
+```
+
 ### Interpolator
 
 An optional function which returns a value given the context and an accessor expression (the value contained between the braces in `#{...}`):
