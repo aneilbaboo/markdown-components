@@ -83,7 +83,7 @@ describe('component-markdown', function () {
     });
 
     it('should render an interpolated attribute', function () {
-      var dom = parse('<SimpleComponent a=#{x.y} />');
+      var dom = parse('<SimpleComponent a={x.y} />');
       var stream = new streams.WritableStream();
       renderer.write(dom, {x: {y: "xyz" }}, stream);
       var result = stream.toString();
@@ -92,7 +92,7 @@ describe('component-markdown', function () {
     });
 
     it('should render an interpolated attribute, ignoring spaces', function () {
-      var dom = parse('<SimpleComponent a=#{ x.y } />');
+      var dom = parse('<SimpleComponent a={ x.y } />');
       var stream = new streams.WritableStream();
       renderer.write(dom, {x: {y: "xyz" }}, stream);
       var result = stream.toString();
@@ -102,7 +102,7 @@ describe('component-markdown', function () {
     
     it('should render subcomponents', function () {
       var dom = parse(
-        '<SimpleComponent a=#{ x.y }>\n' +
+        '<SimpleComponent a={ x.y }>\n' +
         '  <SimpleComponent a=123>\n' +
         '  </SimpleComponent>\n' +
         '</SimpleComponent>'
@@ -137,7 +137,7 @@ describe('component-markdown', function () {
       it('should create HTML in one step', function () {
         
         var result = toHTML({
-          input: ('<SimpleComponent a=#{ x.y }>\n' +
+          input: ('<SimpleComponent a={ x.y }>\n' +
           '  <SimpleComponent a=123>\n' +
           '  </SimpleComponent>\n' +
           '</SimpleComponent>'),
@@ -170,7 +170,7 @@ describe('component-markdown', function () {
         }
       });
 
-      var dom = parse('<MyComponent a=1 b="string" c=#{a.b} d=#{ a.b }/>');
+      var dom = parse('<MyComponent a=1 b="string" c={a.b} d={ a.b }/>');
       var stream = new streams.WritableStream();
       renderer.write(dom, {a: {b: "xyz" }}, stream);
       var result = stream.toString();

@@ -6,7 +6,7 @@
   const isString = util.isString;
   const streams = require('memory-streams');
 
-  const attributeRE = /([^=<>\"\'\s]+)\s*=\s*((?:"([^"]*)")|([-+]?[0-9]*\.?[0-9]+)|(?:#{([^}]*)}))/g
+  const attributeRE = /([^=<>\"\'\s]+)\s*=\s*((?:"([^"]*)")|([-+]?[0-9]*\.?[0-9]+)|(?:{([^}]*)}))/g
  
   function ComponentParser(handler, options) {
     htmlparser.Parser.call(this, handler, { recognizeSelfClosing: true, ...options });

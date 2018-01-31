@@ -1,9 +1,9 @@
-# component-markdown
+# markdown-components
 
-Add custom components to your markdown.  Safe to be used by end-users.
+Add custom React-like components to your Markdown which are safe for end-users. The goal is to enable developers to create rich document editing creation systems for their users. It's designed to bolt on to any Markdown engine with a simple wrapper function.
 
 ```html
-<MyComponent a=1 b="hello" c=#{ a.b }>
+<MyComponent a=1 b="hello" c={ a.b }>
   ## subheading
   * listElement1
   * listElement2
@@ -13,11 +13,11 @@ Add custom components to your markdown.  Safe to be used by end-users.
 </MyComponent>
 ```
 
-This library is intended to provide an enhanced, customizable Markdown language, allowing end users to generate sophisticated documents using custom components provided by the developer.
+## Rationale
 
-Unlike JSX-markdown libraries, interpolation expressions are not evaluated, so there is no script injection vulnerability.
+This approach is different from JSX-markdown packages, which are intended for _developers_, enabling them to write Markdown syntax in their code instead of raw HTML elements. These libraries aren't suitable for use by end-users because React interpolation expressions are full Turing-complete Javascript. Producing HTML would require eval'ing user-generated content either on the server or another user's browser, introducing a security hole.
 
-Use your favorite markdown engine.
+In this package, interpolation expressions, like `c={ a.b }` in the fragment above, are not evaluated, so there is no script injection vulnerability. 
 
 ## Quick start
 
