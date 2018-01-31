@@ -102,7 +102,7 @@
    * @param {Function} interpolator - optional interpolation function (variables, expr) => value (default is standardInterpolator)
    * 
    * components are functions of the form (renderer, tagName, attrs, children, stream) => {}
-   * interpolator uses the expression inside #{} to extract a value from variables
+   * interpolator uses the expression inside {} to extract a value from variables
    */
   function Renderer({ components, markdownEngine, defaultComponent, interpolator }) {
     this._components = {};

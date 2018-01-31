@@ -1,6 +1,6 @@
 # markdown-components
 
-Add React-like components to your Markdown. The goal is to allow developers to enhance Markdown which can be safely used by end-users. It's designed to bolt on to any Markdown engine with a simple wrapper function.
+Add React-like components to Markdown which can be safely used by end-users. It's designed to bolt on to any Markdown engine with a simple wrapper function.
 
 ```html
 <MyComponent a=1 b="hello" c={ a.b }>
@@ -12,12 +12,6 @@ Add React-like components to your Markdown. The goal is to allow developers to e
   _more_ markdown
 </MyComponent>
 ```
-
-## Rationale
-
-This approach is different from JSX-markdown packages, which are intended for _developers_, enabling writing Markdown syntax in code instead of raw HTML elements. These libraries aren't suitable for use by end-users because React interpolation expressions are full on Javascript. I.e., you'd need to eval user-generated javascript either on your server or another user's browser. :/
-
-In this package, interpolation expressions, like `c={ a.b }` in the fragment above, are not evaluated, so there is no script injection vulnerability. 
 
 ## Quick start
 
@@ -43,7 +37,7 @@ var components = {
 // use the Box component:
 var customizedMarkdown = `
 Custom components:
-<Box lineSize=2 color=#{ user.favoriteColor }>
+<Box lineSize=2 color={ user.favoriteColor }>
 Can contain...
 # Markdown
 And _markdown_ can contain custom components:
@@ -70,6 +64,15 @@ console.log(html); // ~=>
 // </div>
 // </div>
 ```
+
+## Rationale
+
+There are a number of JSX-markdown packages which allow developers to use Markdown syntax in their JSX files. In contrast, this library adds custom components to Markdown which can be safely used by end-users. 
+
+JSX-markdown libraries aren't suitable because React interpolation expressions are Javascript. I.e., you'd need to eval user-generated javascript either on your server or another user's browser. You could try evaluating such code in a sandboxed environment, but it's inefficient and asynchronous. The latter specifically rules out using that approach in React front ends, for example, which require synchronous rendering.
+
+In this package, interpolation expressions, like `{ a.b }`, are not evaluated, so there is no script injection vulnerability, and inteprolation is a simple synchronous function.  End-users only have access to variables you provide in a context object.
+
 ## API
 
 ### toHTML
@@ -156,7 +159,7 @@ Because the component has responsibility for rendering `__children`, you can man
 
 ```html
 # Your Results
-<Switch value=#{user.score}>
+<Switch value={user.score}>
 <Case value="A">You did _great_!</Case>
 <Case value="B">Well done</Case>
 <Default>Better luck next time</Default>
