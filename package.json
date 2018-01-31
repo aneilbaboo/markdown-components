@@ -1,0 +1,22 @@
+{
+  "name": "component-markdown",
+  "version": "0.0.1",
+  "description": "Markdown parser with powerful custom tags",
+  "main": "index.js",
+  "author": "Aneil Mallavarapu",
+  "license": "MIT",
+  "scripts": {
+    "test": "mocha"
+  },
+  "dependencies": {
+    "htmlparser": "^1.7.7",
+    "htmlparser2": "^3.9.2",
+    "memory-streams": "^0.1.2"
+  },
+  "devDependencies": {
+    "chai": "^4.1.2",
+    "lodash": "^4.17.4",
+    "markdown-it": "^8.4.0",
+    "mocha": "^5.0.0"
+  }
+}
