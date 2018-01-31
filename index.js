@@ -3,6 +3,7 @@
   var util = require('util');
   var isObject = util.isObject;
   var isArray = util.isArray;
+  var isString = util.isString;
   var streams = require('memory-streams');
  
   function parse(input) {
@@ -22,13 +23,20 @@
 
   };
   
-  function standardDefaultComponent(renderer, tagName, attrs, children, stream) {
-    stream.write(`<${tagName}`);
+  function standardDefaultComponent(props, render) {
+    var tagName = props.__name;
+    var children = props.__children;
+    var attrs = Object.assign({}, props);
+    delete attrs.__name;
+    delete attrs.__children;
+
+    render(`<${tagName}`);
     for (var attr in attrs) {
-      stream.write('')
+      render(' %s=%j', attr, attrs[attr]);
     }
-    renderer.write(children);
-    stream.write(`</${tagName}>`);
+    render('>');
+    render(children);
+    render(`</${tagName}>`);
   }
 
   function standardInterpolator(variables, accessor) {
@@ -45,8 +53,7 @@
     }
   }
 
-  function parseAttributes(elt, env, interpolator) {
-    debugger;
+  function parseAttributes(elt, context, interpolator) {
     if (elt.data) {
       const rawAttrs = elt.data.split(/\s+(.*)/)[1];
       const attrRE = /(\w+)=((?:"([^"]*)")|([-+]?[0-9]*\.?[0-9]+)|(?:#{([^}]*)}))/g
@@ -59,7 +66,7 @@
         } else if (match[4]) { // number
           result[variable] = parseFloat(match[4]);
         } else if (match[5]) { // interpolation 
-          result[variable] = interpolator(env, match[5].trim(' '));
+          result[variable] = interpolator(context, match[5].trim(' '));
         }
       }
       return result;
@@ -94,29 +101,45 @@
     if (element.type=='text') {
       return this._markdownRenderer;
     } else {
-      return this._components[element.name.toLowerCase()] || defaultComponent;
+      return this._components[element.name.toLowerCase()] || this._defaultComponent;
     }
   }
 
-  Renderer.prototype.renderComponent = function(elt, env, stream) {
-    var component = this.componentFromElement(elt) || this._defaultComponent;
-    if (component) {  
-      var attrs = parseAttributes(elt, env, this._interpolator);
-      component(this, elt.name, attrs, elt.children, stream);
+  Renderer.prototype.writeElement = function(elt, context, stream) {
+    const _this = this;
+    const render = function (obj) {
+      if (isString(obj)) {
+        stream.write(obj);
+      } else {
+        _this.write(obj, context, stream);
+      }
+    };
+    
+    // render markdown
+    if (elt.type=='text') {
+      this._markdownEngine(elt.data, render);
+    } else {
+      const component = this.componentFromElement(elt) || this._defaultComponent;
+      if (component) {  
+        const props = parseAttributes(elt, context, this._interpolator);
+        props.__name = elt.name;
+        props.__children = elt.children;
+        component(props, render);
+      } 
     } 
   }
 
-  Renderer.prototype.write = function(elt, env, stream) {
+  Renderer.prototype.write = function(elt, context, stream) {
     if (!elt) {
       return;
     } else if (isArray(elt)) {
       var _this = this;
       var elements = elt;
       elements.forEach(function (elt) {
-        _this.write(elt, env, stream);
+        _this.write(elt, context, stream);
       });
     } else if (isObject(elt)) {
-      this.renderComponent(elt, env, stream);
+      this.writeElement(elt, context, stream);
     } else {
       throw new Error(`Unexpected dom element: ${JSON.stringify(elt)}`);
     }
@@ -126,18 +149,21 @@
    * toHTML - Combines parsing and rendering in one easy step
    * 
    * @param {any} options
-   * @param {string} input  - markdown with components
-   * @param {Object} components - { componentName: function (renderer, tagName, attrs, children, stream) => writes HTML to stream, ... }
-   * @param {Function} markdownEngine - function (text, stream) => writes HTML to stream
-   * @param {Function} defaultComponent - function (renderer, tagName, attrs, children, stream)
-   * @param {Function} interpolator - optional interpolation function (variables, expr) => value (default is standardInterpolator)
+   * @param {string} options.input  - markdown with components
+   * @param {Object} options.components - { componentName: function ({__name, __children, ...props}, render) => use render method to write to stream
+   * @param {Function} options.markdownEngine - function (text, render) => writes HTML using render method
+   * @param {Function} options.defaultComponent - function ({__name, __children, ...props}, render)
+   * @param {Function} options.interpolator - optional interpolation function (variables, expr) => value (default is standardInterpolator)
    
    * @returns {string} HTML
    */
-  function toHTML({ input, components, markdownEngine, env }) {
-    var renderer = new Renderer(components, markdownEngine);
+  function toHTML({ input, components, markdownEngine, context }) {
+    var renderer = new Renderer({ 
+      components: components, 
+      markdownEngine: markdownEngine
+    });
     var stream = new streams.WritableStream();
-    renderer.write(parse(input), env, stream);
+    renderer.write(parse(input), context, stream);
     return stream.toString();
   }
 
