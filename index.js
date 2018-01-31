@@ -1,26 +1,50 @@
 (function () {
-  var htmlparser = require("htmlparser");
-  var util = require('util');
-  var isObject = util.isObject;
-  var isArray = util.isArray;
-  var isString = util.isString;
-  var streams = require('memory-streams');
+  const htmlparser = require("htmlparser");
+  const util = require('util');
+  const isObject = util.isObject;
+  const isArray = util.isArray;
+  const isString = util.isString;
+  const streams = require('memory-streams');
+
+  const attributeRE = /([^=<>\"\'\s]+)\s*=\s*((?:"([^"]*)")|([-+]?[0-9]*\.?[0-9]+)|(?:#{([^}]*)}))/g
  
+  function ComponentParser(handler, options) {
+    htmlparser.Parser.call(this, handler, { recognizeSelfClosing: true, ...options });
+  }
+
+  ComponentParser.prototype = Object.create(htmlparser.Parser.prototype);
+  ComponentParser.prototype.constructor = ComponentParser;
+
+  ComponentParser.prototype.parseAttribs = function ComponentParser$parseAttribs(elt) {
+    if (elt.type!='text' && elt.data) {
+      const rawAttrs = elt.data.split(/\s+(.*)/)[1];
+      var match;
+      var attribs = {};
+      while ((match=attributeRE.exec(rawAttrs))!=null) {
+        var variable = match[1]
+        if (match[3]) { // string
+          attribs[variable] = match[3];
+        } else if (match[4]) { // number
+          attribs[variable] = parseFloat(match[4]);
+        } else if (match[5]) { // interpolation 
+          attribs[variable] = { accessor: match[5].trim(' ') };
+        }
+      }
+      elt.attribs = attribs;
+    }
+  }
+
   function parse(input) {
-    var parsedDOM;
     var handler = new htmlparser.DefaultHandler(function (error, dom) {
       if (error) {
         throw error;
-      } else {
-        parsedDOM = dom;
       }
     });
 
-    var parser = new htmlparser.Parser(handler, { recognizeSelfClosing: true });
+    var parser = new ComponentParser(handler);
     parser.parseComplete(input);
 
-    return parsedDOM;
-
+    return handler.dom;
   };
   
   function standardDefaultComponent(props, render) {
@@ -53,26 +77,19 @@
     }
   }
 
-  function parseAttributes(elt, context, interpolator) {
-    if (elt.data) {
-      const rawAttrs = elt.data.split(/\s+(.*)/)[1];
-      const attrRE = /(\w+)=((?:"([^"]*)")|([-+]?[0-9]*\.?[0-9]+)|(?:#{([^}]*)}))/g
-      var match;
-      var result = {};
-      while ((match=attrRE.exec(rawAttrs))!=null) {
-        var variable = match[1]
-        if (match[3]) { // string
-          result[variable] = match[3];
-        } else if (match[4]) { // number
-          result[variable] = parseFloat(match[4]);
-        } else if (match[5]) { // interpolation 
-          result[variable] = interpolator(context, match[5].trim(' '));
+  function interpolateAttributes(attribs, context, interpolator) {
+    var props = {};
+    if (attribs) {
+      for (var key in attribs) {
+        var value = attribs[key];
+        if (isObject(value)) {
+          props[key] = interpolator(context, value.accessor);
+        } else {
+          props[key] = value;
         }
       }
-      return result;
-    } else {
-      return {};
     }
+    return props;
   }
 
   /**
@@ -117,13 +134,16 @@
     
     // render markdown
     if (elt.type=='text') {
-      this._markdownEngine(elt.data, render);
+      this._markdownEngine(elt.data, render); // TODO: remove this branch, turn it into a component
     } else {
+      // or a component:
       const component = this.componentFromElement(elt) || this._defaultComponent;
       if (component) {  
-        const props = parseAttributes(elt, context, this._interpolator);
-        props.__name = elt.name;
-        props.__children = elt.children;
+        // inject __name and __children into props
+        const props = Object.assign(
+          { __name: elt.name, __children: elt.children },
+          interpolateAttributes(elt.attribs, context, _this._interpolator)
+        );
         component(props, render);
       } 
     } 

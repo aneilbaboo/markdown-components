@@ -33,7 +33,7 @@ describe('component-markdown', function () {
       expect(parseResult[4].type).to.equal('tag');
       expect(parseResult[4].name).to.equal('MyComponent');
       expect(parseResult[4].attribs).to.deep.equal({
-        a:"1", b: "string", c:"#{x.y}"
+        a: 1, b: 'string', c: { accessor: 'x.y' }
       });
       expect(parseResult[4].children.length).to.equal(2);
     });
@@ -135,7 +135,7 @@ describe('component-markdown', function () {
 
     context('toHTML', function () {
       it('should create HTML in one step', function () {
-        debugger;
+        
         var result = toHTML({
           input: ('<SimpleComponent a=#{ x.y }>\n' +
           '  <SimpleComponent a=123>\n' +
