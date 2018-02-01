@@ -16,19 +16,20 @@ Add React-like components to Markdown which can be safely used by end-users. It'
 ## Quick start
 
 ```javascript
-var { toHTML } = require('component-markdown');
-var MarkdownIt = requre('markdown-it');
-var markdown = new MarkdownIt();
+var { toHTML } = require("component-markdown");
+var markdown = (new require('markdown-it'))(); // npm i markdown-it
 
 // a function for rendering HTML using your favorite markdown engine:
-var markdownEngine = function (mdText, render) {
+var markdownEngine = function(mdText, render) {
   render(markdown.render(mdText)); // render the results
 };
 
 // define a Box component:
 var components = {
-  Box: function ({lineSize, color, __children}, render) {
-    render(`<div style="border-width:${lineSize}; background-color:${color};">`);
+  Box: function({ lineSize, color, __children }, render) {
+    render(
+      `<div style="border-width:${lineSize}; background-color:${color};">`
+    );
     render(__children); // render internal elements
     render(`</div>`);
   }
@@ -45,11 +46,11 @@ And _markdown_ can contain custom components:
 which can contain *more markdown*
 and so on
 </Box>
-</Box>`
+</Box>`;
 
 var html = toHTML({
-  input: customizedMarkdown, 
-  components: components, 
+  input: customizedMarkdown,
+  components: components,
   markdownEngine: markdownEngine
 });
 console.log(html); // ~=>
@@ -67,49 +68,79 @@ console.log(html); // ~=>
 
 ## Rationale
 
-There are a number of JSX-markdown packages which allow developers to use Markdown syntax in their JSX files. In contrast, this library adds custom components to Markdown which can be safely used by end-users. 
+There are a number of JSX-markdown packages which allow developers to use Markdown syntax in their JSX files. In contrast, this library adds custom components to Markdown which can be safely used by end-users.
 
 JSX-markdown libraries aren't suitable because React interpolation expressions are Javascript. I.e., you'd need to eval user-generated javascript either on your server or another user's browser. You could try evaluating such code in a sandboxed environment, but it's inefficient and asynchronous. The latter specifically rules out using that approach in React front ends, for example, which require synchronous rendering.
 
-In this package, interpolation expressions, like `{ a.b }`, are not evaluated, so there is no script injection vulnerability, and inteprolation is a simple synchronous function.  End-users only have access to variables you provide in a context object.
+In this package, interpolation expressions, like `{ a.b }`, are not evaluated, so there is no script injection vulnerability, and inteprolation is a simple synchronous function. End-users only have access to variables you provide in a context object.
 
 ## API
 
 ### toHTML
 
-Simple one step method for generating HTML. 
+Simple one step method for generating HTML.
 
-Calls parse, instantiates a Renderer and generates HTML 
+Parses and renders Markdown with components to HTML, interpolating context variables.
 
 ```javascript
-
-var html = toHTML({
-  input, // required text containing mixed markdown & component markup
-  components, // Object containing component functions
-  markdownEngine, 
-  defaultComponent,
-  interpolator
+toHTML({
+  input: '<MyComponent a={ x.y } b=123 c="hello"># This is {<InlineComponent/>} a heading</MyComponent>, 
+  components: {
+    MyComponent({a, b, c}, render) { render(`<div class=my-component>a=${a};b=${b};c=${c}</div>`); }
+  },
+  markdownEngine(mdText, render) { render(markdown.render(mdText)); },
+  context:{ x: { y: "interpolated" } }
+  // defaultComponent,
+  // interpolator
 });
+// =>
+// "<div class=my-component>a=interpolated;b=123;c=hello</div>"
 ```
 
 ### parse
-Generates a parsed tree from component markdown input text
+
+Generates a parsed tree from component markdown input text.
+
+Note that this function doesn't parse Markdown. Markdown parsing is currently done by the renderer. This is expected to change in future.
 
 ```javascript
-var elements = parse(input);
-```
+var parsedElements = parse(`<MyComponent a={ x.y.z } b=123 c="hello">
+# Please note
+Currently, markdown is parsed
+* during the rendering step
+</MyComponent>
+`);
+// =>
+// [
+//   {
+//     type: 'tag',
+//     name: 'MyComponent',
+//     attribs: {
+//       a: { accessor: 'x.y.z' },
+//       b: 123,
+//       c: "hello"
+//     }
+//     children: [
+//       {
+//         type: 'text',
+//         data: '# Please note\nCurrently, markdown is parsed\n* during the rendering step\n" 
+//       }
+//     ]
+//   }
+// ]
+````
 
 ### Renderer
 
-A class representing the rendering logic. 
+A class representing the rendering logic.
 
 #### constructor
 
 ```javascript
 var renderer = new Renderer({
-  components: Object // 
+  components: Object // { componentName: ({__name, __children, ...atrs})=>{}, ...}
   markdownEngine: Function // (markdown, render) => {}
-  defaultComponent: Function // ({__name, __children, ..attrs}, render) = > {..render html }
+  defaultComponent: Function // ({__name, __children, ...attrs}, render) = > {..render html }
   interpolator: Function // (context, accessor) => value
 });
 ```
@@ -120,38 +151,46 @@ Writes an element (e.g., the result from parse) to `stream`, interpolating varia
 
 ```javascript
 renderer.write(elt, context, stream);
-
-console.log(stream.toString()); // outputs the HTML
+var html = stream.toString();
 ```
 
 ### Components
 
-Components are functions which render HTML.  They're provided to the `Renderer` constructor and the `toHTML` as an Object where the keys are the component names, and the values are a function which takes attributes and a rendering function as arguments:
+The components argument is an object where keys are tag names, and functions render HTML. You must pass this argument to both the `Renderer` constructor and `toHTML` functions.
 
-```javascript
-// example component function:
-function ({__name, __children, ...attrs}, render) {
-  // generate custom HTML:
-  render(`<div>`);
-  render(__children); // render elements between start and end tag
-  render(`</div>`);
-}
-```
-
-The first argument is an Object containing attribute values passed in the markup, plus a couple of special keys:
-
-`attrs` interpolatd key value pairs passed in the markup
-`__name` name of the tag
-`__children` array of Objects representing elements between the open and close tags, having the form:
+For example:
 
 ```javascript
 {
-  type: string, // "tag", "text", or "script" 
-  name: string, // name of the tag
-  attribs: Object, // attributes passed to this component
-  children: array // array of objects like this
+  Box: function ({__name, __children, color}, render) {
+    // generate custom HTML:
+    render(`<div class="box" style="background-color:${color}">`);
+    render(__children); // render elements between start and end tag
+    render(`</div>`);
+  }
 }
 ```
+
+Allows you to write:
+```html
+<Box color="red">
+# This markdown
+Will be displayed on a red background
+</Box>
+```
+
+Component functions are of the form:
+```javascript
+(tagArguments, render) => { }
+```
+
+The first argument, tagArguments, contains values passed in the markup, plus two special keys:
+
+`__name` name of the tag
+`__children` array of Objects representing elements between the open and close tags, having the form:
+
+The second argument, `render` is a function which takes a string representing HTML or an object representing parsed entities and writes it to a stream.
+
 
 #### Higher Order Components
 
@@ -187,18 +226,54 @@ toHTML({
 
 ### Markdown Engine
 
-You'll need to install a Markdown interpreter and write a wrapper function.  You'll provide this to either the `Renderer` constructor or `toHTML` function:
+You'll need to install a Markdown interpreter and write a wrapper function. You'll provide this to either the `Renderer` constructor or `toHTML` function:
 
 ```javascript
 var MarkdownIt = require('markdown-it');
 var markdown = new MarkdownIt();
 
 var markdownItEngine = function (mdText, render) {
-  render(markdown.render(mdText)); 
+  render(markdown.render(mdText));
 };
 
 var html = toHTML({
   markdownEngine: markdownItEngine,
   ...
 });
+```
+
+## Separately Parse and Render
+
+If you're rendering the same content many times, it's more efficient to parse once and render the results many times. 
+
+### Example
+```javascript
+var markdown = (new require('markdown-it'))(); // npm i markdown-it
+var streams = require('memory-streams'); // npm i memory-streams
+var renderer = new Renderer({
+  componets: {
+    Box({ __children, color }, render) {
+      render(`<div class="box" style="background-color:${color}">`);
+      render(__children);
+      render(`</div>`);
+    },
+    markdownEngine(input, render) {
+      render(markdown.render(input));
+    }
+  }
+});
+
+var parsedElements = parse('<Box color={user.favoriteColor}>_Here is some_ *markdown*</Box>');
+
+// red box
+stream = streams.getWriteableStream();
+renderer.write(parsedElements,{ user: { favoriteColor: "red" } }, stream);
+console.log(stream.toString());
+// <div class="box" style="background-color:red"><i>Here is some</i> <b>markdown</b></div>
+
+// blue box
+stream = streams.getWriteableStream();
+renderer.write(parsedElements,{ user: { favoriteColor: "blue" } }, stream);
+console.log(stream.toString());
+// <div class="box" style="background-color:blue"><i>Here is some</i> <b>markdown</b></div>
 ```
