@@ -1,0 +1,9 @@
+src/
+node_modules/
+.*
+README.md
+webpack.config.js
+yarn.lock
+.vscode/
+.circleci
+test/
