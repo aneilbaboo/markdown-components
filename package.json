@@ -1,6 +1,6 @@
 {
   "name": "markdown-components",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "Add user-safe, React-like components to your favorite markdown engine",
   "main": "index.js",
   "repository": "https://github.com/aneilbaboo/markdown-components",
