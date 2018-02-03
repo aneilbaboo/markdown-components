@@ -1,16 +1,25 @@
 [![CircleCI](https://circleci.com/gh/aneilbaboo/markdown-components.svg?style=shield&circle-token=fbb8592a984a41740eebf952734f4776b86b0504)](https://circleci.com/gh/aneilbaboo/markdown-components)
 
-Add React-like components to Markdown which can be safely used by end-users. It's designed to bolt on to any Markdown engine with a simple wrapper function.
+# markdown-components
 
+Add custom React-like components to Markdown which can be safely used by end-users. Use with your favorite Markdown engine.
+
+E.g., 
 ```html
-<MyComponent a=1 b="hello" c={ a.b }>
+<Box color={user.favoriteColor} lineWidth=3>
   ## subheading
   * listElement1
   * listElement2
   [google](https://google.com)
-  <MyOtherComponent/>
+  <Box color=blue>Box in box!</Box>
   _more_ markdown
-</MyComponent>
+</Box>
+```
+
+# Install
+
+```javascript
+npm i markdown-components
 ```
 
 ## Quick start
