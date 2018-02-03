@@ -19,13 +19,17 @@ export default class Renderer {
     for (var key in components || {}) {
       this._components[key.toLowerCase()] = components[key];
     }
-    this._defaultComponent = defaultComponent || standardDefaultComponent;
+    this._defaultComponent = defaultComponent;
     this._interpolator = interpolator || standardInterpolator;
     this._markdownEngine = markdownEngine;
   }
 
   componentFromElement(element) {
-    return this._components[element.name.toLowerCase()] || this._defaultComponent;
+    var component = this._components[element.name] || this._defaultComponent;
+    if (!component) {
+      throw new Error(`No component named ${element.rawName}`);
+    }
+    return component;
   }
 
   writeElement(elt, context, stream) {
@@ -78,22 +82,6 @@ export default class Renderer {
 
     this._markdownEngine(interpolatedMarkdown, render);
   }
-}
-
-function standardDefaultComponent(props, render) {
-  var tagName = props.__name;
-  var children = props.__children;
-  var attrs = Object.assign({}, props);
-  delete attrs.__name;
-  delete attrs.__children;
-
-  render(`<${tagName}`);
-  for (var attr in attrs) {
-    render(' %s=%j', attr, attrs[attr]);
-  }
-  render('>');
-  render(children);
-  render(`</${tagName}>`);
 }
 
 function standardInterpolator(variables, accessor) {
