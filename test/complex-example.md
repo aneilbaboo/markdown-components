@@ -1,9 +1,9 @@
 # heading1
-Text1. Hello
+Text after and interpolation { x.y } heading1
 <div>Some more text</div><selfClosing/>
-## heading 2
+## Heading after selfClosing
 <MyComponent a=1 b="string" c={ x.y }>
-Internal markdown
+Text inside MyComponent
 * listElt1
 * listElt2
 <SubComponent/></MyComponent>

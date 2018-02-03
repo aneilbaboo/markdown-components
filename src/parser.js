@@ -1,143 +1,130 @@
-import { Readable } from 'stream';
-import RE2 from 're2';
+import Cursor from './cursor';
 
-function parse(input) {
-  return content(input);
+export default function parse(input) {
+  var cursor = new Cursor(input);
+  return content(cursor);
 }
 
-const TextUntilInterpolationOrTag = /^\s*([^<{])*/;
-const UntilInterpolationEnd = /^\s*([^\s}]*)\s*}/;
-const IsTagStartChar = /^<\w/;
-function isInterpolationStart(input) {
-  return /^{\s*([^{])/;
+export function content(cursor, closeTag) {
+  const closeTest = closeTag && new RegExp(`</${closeTag}>`, 'i');
+  var elements = [];
+
+  while (!cursor.eof) {
+    var textElement = text(cursor);
+    if (textElement) {
+      elements.push(textElement);
+    }
+    var tagElement = tag(cursor);
+    if (tagElement) {
+      elements.push(tagElement);
+    }
+    if (closeTest && cursor.capture(closeTest)) {
+      return elements;
+    }
+  }
+
+  if (closeTest) {
+    throw new Error(`Expecting closing tag </${closeTag}> at line ${cursor.lineNumber}`);
+  }
+
+  return elements;
 }
 
-function textUntilInterpolationOrTag(input) {
-  var text = .exec(input);
-  if (text) {
-    return [text, input.slice(text.length)];
+export function tag(cursor) {
+  var startTag = captureStartTag(cursor);
+  if (startTag) {
+    if (!startTag.selfClosing) {
+      startTag.children = content(cursor, startTag.rawName);
+    }
+    return startTag;
   }
 }
 
-function isEnd(input) {
-  return input.length==0;
+export function text(cursor) {
+  var textElement = { type: 'text', blocks: [] };
+  var rawText;
+
+  function captureAndStoreInterpolation() {
+    var interpolationElement = cursor.capture(/^{\s*([^}]*)}/);
+    if (interpolationElement) {
+      textElement.blocks.push({
+        type: 'interpolation',
+        accessor: interpolationElement[1].trim(' ')
+      });
+      return true;
+    }
+  }
+
+  // cursor may start with an interpolation...
+  captureAndStoreInterpolation();
+
+  while (rawText = captureTextUntilBreak(cursor)) {
+    textElement.blocks.push(rawText);
+    if (!captureAndStoreInterpolation() && cursor.test(/^\w/)) {
+      // the next element isn't an interpolation, so must be a tag or EOF
+      break;
+    }
+  }
+
+  return textElement.blocks.length>0 ? textElement : null;
 }
 
-function textElement(text) {
-  if (text) {
+function captureTextUntilBreak(cursor) {
+  var blocks = [];
+  var text;
+  while (text=cursor.capture(/^\s*([^<{])*/)) {
+    if (cursor.test(/^(\\{)|(\\<)|(.<[^\w/])/, -1)) { // false alarm
+      // this is not a break, capture the character and continue...
+      blocks.push(text[0] + cursor.next());
+    } else {
+      blocks.push(text[0]);
+      return blocks.join('');
+    }
+  }
+}
+
+function captureAttributes(cursor) {
+  const attribRE = /^\s*([^=<>"'\s]+)\s*=\s*((?:"([^"]*)")|([-+]?[0-9]*\.?[0-9]+)|(?:{([^}]*)}))/;
+  var attribs = {};
+  var match;
+
+  while (match = cursor.capture(attribRE)) {
+    var variable = match[1];
+    if (match[3]) { // string
+      attribs[variable] = match[3];
+    } else if (match[4]) { //number
+      attribs[variable] = parseFloat(match[4]);
+    } else if (match[5]) { //interpolation
+      debugger;
+      attribs[variable] = {
+        type: 'interpolation',
+        accessor: match[5].trim(' ')
+      };
+    }
+  }
+  return attribs;
+}
+
+function captureStartTag(cursor) {
+  var index = cursor.index;
+  var tagMatch = cursor.capture(/^<(\w+)/);
+  if (tagMatch) {
+    var tagName = tagMatch[1];
+    var attrs = captureAttributes(cursor);
+    var endBracket = cursor.capture(/^\s*(\/)?>/);
+
+    if (!endBracket) {
+      throw new Error(`Error while parsing tag '${cursor.peek(index, 10)}...' at line ${cursor.lineNumber}`);
+    }
+
     return {
-      type: 'text',
-      sequences: [ text ]
+      type: 'tag',
+      name: tagName.toLowerCase(),
+      rawName: tagName,
+      attrs,
+      children: [],
+      selfClosing: endBracket[1]==='/'
     };
   }
 }
 
-function addElementIfValid(elements, newElement) {
-  if (newElement) {
-    elements.push(newElement);
-  }
-}
-
-function makeTagCloseTest(tag) {
-  var tagRE = new RegExp(`^<\/(${tag})>`, i);
-  return function(input) {
-    if (tagRE.test(input)) {
-      return  [true, input.slice(tag.length + 3)];
-    } else {
-      return [false, input];
-    }
-  }
-}
-
-function content(cursor, closeTest) {
-  closeTest = closeTest || function () { return false; };
-  var elements = [];
-  var text;
-  var currentElement;
-  var result
-  var closed;
-
-  while (!isEnd(cursor)) {
-    [text, cursor] = textUntilInterpolationOrTag(cursor);
-      
-    // If tag, add the text to the elements
-    if (cursor.text[0]==='<') { 
-      addElementIfValid(elements, textElement(text));
-    
-      // closing!
-      if (cursor.text[1]==='/') {
-        [closed, cursor] = closeTest(input);
-
-        if (closed) {
-          return [elements, cursor];
-        } else {
-          throw new Error(`Unexpected closing tag`)
-        }
-      }
-      [closed, input] = closeTest(input); 
-      if (closed) {
-        return [elements, input];
-      }    
-      
-
-      
-    }
-  }
-  if (isEnd(nextInput)) {
-    if (terminator(nextInput)) {
-      return elements;
-    } else {
-      elements.push(tag(nextInput));
-    }
-  } else if (isInterpolationStart(input)) {
-    elements.push({
-      type: 'interpolation',
-
-    })
-  }
-}
-
-function text()
-/**
- * Tag.
- */
-function tag() {
-  debug('tag %j', xml);
-  var m = match(/^<([\w-:.]+)\s*/);
-  if (!m) return;
-
-  // name
-  var node = {
-    name: m[1],
-    attributes: {},
-    children: []
-  };
-
-  // attributes
-  while (!(eos() || is('>') || is('?>') || is('/>'))) {
-    var attr = attribute();
-    if (!attr) return node;
-    node.attributes[attr.name] = attr.value;
-  }
-
-  // self closing tag
-  if (match(/^\s*\/>\s*/)) {
-    return node;
-  }
-
-  match(/\??>\s*/);
-
-  // content
-  node.content = content();
-
-  // children
-  var child;
-  while (child = tag()) {
-    node.children.push(child);
-  }
-
-  // closing
-  match(/^<\/[\w-:.]+>\s*/);
-
-  return node;
-}
