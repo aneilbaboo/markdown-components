@@ -9,7 +9,8 @@
   "scripts": {
     "build": "WEBPACK_ENV=build webpack",
     "dev": "WEBPACK_ENV=dev webpack --progress --colors --watch",
-    "test": "mocha --compilers js:babel-core/register --colors -w ./test/*.spec.js"
+    "test": "mocha --compilers js:babel-core/register --colors -w ./test/*.spec.js",
+    "debugTest": "mocha --inspect-brk --compilers js:babel-core/register --colors ./test/*.spec.js"
   },
   "dependencies": {
     "htmlparser": "^1.7.7",
