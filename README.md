@@ -1,5 +1,4 @@
-[![CircleCI](https://circleci.com/gh/aneilbaboo/markdown-components.svg?style=svg&circle-token=fbb8592a984a41740eebf952734f4776b86b0504)](https://circleci.com/gh/aneilbaboo/markdown-components)
-# markdown-components
+[![CircleCI](https://circleci.com/gh/aneilbaboo/markdown-components.svg?style=shield&circle-token=fbb8592a984a41740eebf952734f4776b86b0504)](https://circleci.com/gh/aneilbaboo/markdown-components)
 
 Add React-like components to Markdown which can be safely used by end-users. It's designed to bolt on to any Markdown engine with a simple wrapper function.
 
