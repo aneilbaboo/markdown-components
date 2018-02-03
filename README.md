@@ -25,7 +25,7 @@ npm i markdown-components
 ## Quick start
 
 ```javascript
-var { toHTML } = require("component-markdown");
+var { toHTML } = require("markdown-components");
 var markdown = (new require('markdown-it'))(); // npm i markdown-it
 
 // a function for rendering HTML using your favorite markdown engine:
