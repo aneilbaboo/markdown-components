@@ -9,7 +9,8 @@
   "scripts": {
     "build": "WEBPACK_ENV=build webpack",
     "dev": "WEBPACK_ENV=dev webpack --progress --colors --watch",
-    "test": "mocha --require babel-core/register --colors -w ./test/*.spec.js",
+    "watch": "mocha --require babel-core/register --colors -w ./test/*.spec.js",
+    "test": "mocha --require babel-core/register --colors ./test/*.spec.js",
     "debugTest": "mocha --inspect-brk --require babel-core/register --colors ./test/*.spec.js"
   },
   "dependencies": {
@@ -23,6 +24,7 @@
     "babel-loader": "^7.1.2",
     "babel-minify-webpack-plugin": "^0.2.0",
     "babel-preset-env": "^1.6.1",
+    "babel-preset-stage-3": "^6.24.1",
     "chai": "^4.1.2",
     "eslint": "^4.16.0",
     "eslint-config-standard": "^11.0.0-beta.0",
