@@ -1,23 +1,22 @@
-var { parse, Renderer, toHTML} = require('..');
-var fs = require('fs');
-var expect = require('chai').expect;
-var path = require('path');
-var _ = require('lodash');
-var { isArray } = require('util');
-var MarkdownIt = require('markdown-it');
-var markdown = new MarkdownIt();
-var streams = require('memory-streams');
+import { parse, Renderer, toHTML } from '../src';
+import fs from 'fs';
+import { expect } from 'chai';
+import path from 'path';
+import _ from 'lodash';
+import MarkdownIt from 'markdown-it';
+import streams from 'memory-streams';
 
-var example = fs.readFileSync(path.join(__dirname, 'complex-example.md'));
+const markdown = new MarkdownIt();
+const example = fs.readFileSync(path.join(__dirname, 'complex-example.md'));
 
 describe('component-markdown', function () {
   context('parse', function () {
     it('should return an array containing objects representing the parsed HTML tree', function () {
       var parseResult = parse(example);
-      
+
       expect(parseResult).to.be.an('array');
       expect(parseResult.length).to.equal(5);
-      
+
       expect(parseResult[0].type).to.equal('text');
       expect(parseResult[0].data).to.exist;
 
@@ -29,7 +28,7 @@ describe('component-markdown', function () {
       expect(parseResult[2].name).to.equal('selfClosing');
 
       expect(parseResult[3].type).to.equal('text');
-      
+
       expect(parseResult[4].type).to.equal('tag');
       expect(parseResult[4].name).to.equal('MyComponent');
       expect(parseResult[4].attribs).to.deep.equal({
@@ -46,11 +45,11 @@ describe('component-markdown', function () {
 
     beforeEach(function() {
       components =  {
-        SimpleComponent: function ({__children, a}, render) {
-          render(`<div class="simple-component">`);
-          render(`a=${a}:${typeof(a)}\n`);
+        SimpleComponent: function ({ __children, a }, render) {
+          render('<div class="simple-component">');
+          render(`a=${a}:${ typeof a }\n`);
           render(__children);
-          render(`</div>`);
+          render('</div>');
         }
       };
 
@@ -67,7 +66,7 @@ describe('component-markdown', function () {
     it('should render a float attribute', function () {
       var dom = parse('<SimpleComponent a=1.09 />');
       var stream = new streams.WritableStream();
-      renderer.write(dom, {a: {b: "xyz" }}, stream);
+      renderer.write(dom, { a: { b: 'xyz' }}, stream);
       var result = stream.toString();
 
       expect(result).to.have.string('a=1.09:number');
@@ -76,7 +75,7 @@ describe('component-markdown', function () {
     it('should render a string attribute', function () {
       var dom = parse('<SimpleComponent a="abc" />');
       var stream = new streams.WritableStream();
-      renderer.write(dom, {a: {b: "xyz" }}, stream);
+      renderer.write(dom, { a: { b: 'xyz' }}, stream);
       var result = stream.toString();
 
       expect(result).to.have.string('a=abc:string');
@@ -85,7 +84,7 @@ describe('component-markdown', function () {
     it('should render an interpolated attribute', function () {
       var dom = parse('<SimpleComponent a={x.y} />');
       var stream = new streams.WritableStream();
-      renderer.write(dom, {x: {y: "xyz" }}, stream);
+      renderer.write(dom, { x: { y: 'xyz' }}, stream);
       var result = stream.toString();
 
       expect(result).to.have.string('a=xyz:string');
@@ -94,12 +93,12 @@ describe('component-markdown', function () {
     it('should render an interpolated attribute, ignoring spaces', function () {
       var dom = parse('<SimpleComponent a={ x.y } />');
       var stream = new streams.WritableStream();
-      renderer.write(dom, {x: {y: "xyz" }}, stream);
+      renderer.write(dom, { x: { y: 'xyz' }}, stream);
       var result = stream.toString();
-      
+
       expect(result).to.have.string('a=xyz:string');
     });
-    
+
     it('should render subcomponents', function () {
       var dom = parse(
         '<SimpleComponent a={ x.y }>\n' +
@@ -108,12 +107,12 @@ describe('component-markdown', function () {
         '</SimpleComponent>'
       );
       var stream = new streams.WritableStream();
-      renderer.write(dom, {x: {y: "xyz" }}, stream);
+      renderer.write(dom, { x: { y: 'xyz' }}, stream);
       var result = stream.toString();
 
-      expect(result).to.have.string('a=xyz:string');      
+      expect(result).to.have.string('a=xyz:string');
     });
-    
+
     it('should render markdown inside a component', function () {
       var dom = parse(
         '<SimpleComponent>\n' +
@@ -135,7 +134,7 @@ describe('component-markdown', function () {
 
     context('toHTML', function () {
       it('should create HTML in one step', function () {
-        
+
         var result = toHTML({
           input: ('<SimpleComponent a={ x.y }>\n' +
           '  <SimpleComponent a=123>\n' +
@@ -152,17 +151,17 @@ describe('component-markdown', function () {
       });
     });
 
-    it('should render a component with multiple variables', function () { 
+    it('should render a component with multiple variables', function () {
       var renderer = new Renderer({
         components: {
-          MyComponent: function ({__children, a,b,c,d}, render) {
-            render(`<div class="my-component">`)
-            render(`a=${a}:${typeof(a)}\n`);
-            render(`b=${b}:${typeof(b)}\n`);
-            render(`c=${c}:${typeof(c)}\n`);
-            render(`d=${d}:${typeof(d)}\n`);
-            render(__children)
-            render(`</div>`);
+          MyComponent: function ({ __children, a,b,c,d }, render) {
+            render('<div class="my-component">');
+            render(`a=${a}:${typeof a}\n`);
+            render(`b=${b}:${typeof b}\n`);
+            render(`c=${c}:${typeof c}\n`);
+            render(`d=${d}:${typeof d}\n`);
+            render(__children);
+            render('</div>');
           }
         },
         markdownEngine: function (text, render) {
@@ -172,7 +171,7 @@ describe('component-markdown', function () {
 
       var dom = parse('<MyComponent a=1 b="string" c={a.b} d={ a.b }/>');
       var stream = new streams.WritableStream();
-      renderer.write(dom, {a: {b: "xyz" }}, stream);
+      renderer.write(dom, { a: { b: 'xyz' }}, stream);
       var result = stream.toString();
 
       expect(result).to.have.string('a=1:number');
