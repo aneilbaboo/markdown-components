@@ -47,6 +47,17 @@ describe('Cursor', function () {
       var cursor = new Cursor('abcdefg', 3);
       expect(cursor.test(/abc/)).to.be.false;
     });
+
+    it('should test at the provided offset', function () {
+      var cursor = new Cursor('abcdefg', 3);
+      expect(cursor.test(/abc/, -3)).to.be.true;
+      expect(cursor.test(/abc/, 1)).to.be.false;
+    });
+
+    it('should return false when cursor is eof', function () {
+      var cursor = new Cursor('abc', 3);
+      expect(cursor.test(/.*/)).to.be.false;
+    });
   });
 
   context('#capture', function () {
@@ -64,6 +75,11 @@ describe('Cursor', function () {
       var capture = cursor.capture(/b(.*)e/);
 
       expect(capture).to.be.null;
+    });
+
+    it('should return null when cursor is eof', function () {
+      var cursor = new Cursor('abc', 3);
+      expect(cursor.capture(/(.*)/)).to.be.null;
     });
   });
 

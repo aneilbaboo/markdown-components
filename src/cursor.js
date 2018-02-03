@@ -34,8 +34,8 @@ export default class Cursor {
    * @returns {boolean} success
    * @memberof Cursor
    */
-  test(re) {
-    return re.test(this._buffer.slice(this._index));
+  test(re, offset=0) {
+    return !this.eof && re.test(this._buffer.slice(this._index + offset));
   }
 
   /**
@@ -47,7 +47,7 @@ export default class Cursor {
    * @memberof Cursor
    */
   capture(re) {
-    var match = re.exec(this._buffer.slice(this._index));
+    var match = this.eof ? null : re.exec(this._buffer.slice(this._index));
     if (match) {
       this._index += match[0].length + match.index;
     }
@@ -86,5 +86,10 @@ export default class Cursor {
     } else {
       return null;
     }
+  }
+
+  get lineNumber() {
+    var stringToCurrentIndex = this._buffer.slice(0, this._index).toString();
+    return stringToCurrentIndex.split(/\r\n|\r|\n/).length;
   }
 }
