@@ -3,6 +3,10 @@
 # Check https://circleci.com/docs/2.0/language-javascript/ for more details
 #
 version: 2
+machine:
+  environment:  
+    CC_TEST_REPORTER_ID: 8a731d38e836a895f196159fd5a7ca8b1c84fd2f778f0256bcbcf6ff03fbcd1a
+
 jobs:
   build:
     docker:
@@ -16,10 +20,10 @@ jobs:
 
       # Download and cache dependencies
       - restore_cache:
-          keys:
-          - v1-dependencies-{{ checksum "package.json" }}
-          # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
+        keys:
+        - v1-dependencies-{{ checksum "package.json" }}
+        # fallback to using the latest cache if no exact match is found
+        - v1-dependencies-
 
       - run: yarn install --dev
 
@@ -28,7 +32,20 @@ jobs:
             - node_modules
           key: v1-dependencies-{{ checksum "package.json" }}
         
+      - run:
+          name: Download Code Climate test-reporter
+          command: |
+            curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+            chmod +x ./cc-test-reporter
+      
       # run tests!
-      - run: yarn lint && yarn test
+      - run:
+          name: Run Tests and Code Coverage
+          command: |
+            ./cc-test-reporter before-build
+            yarn lint && yarn test
+            cd coverage
+            ../cc-test-reporter after-build -t clover --exit-code $?
+  
 
 
