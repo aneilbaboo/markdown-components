@@ -50,7 +50,11 @@ export default class Parser {
       const selfClosing = (endBracket[1]==='/');
 
       if (!endBracket) {
-        throw new Error(`Missing end bracket while parsing tag '${this.cursor.peek(index, 10)}...' at line ${this.cursor.lineNumber}`);
+        throw new Error(`Missing end bracket while parsing tag '${
+          this.cursor.peek(index, 10)
+        }...' at line ${
+          this.cursor.lineNumber
+        }`);
       }
 
       if (name[0]==='/') {
