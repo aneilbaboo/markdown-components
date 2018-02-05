@@ -1,130 +1,138 @@
 import Cursor from './cursor';
 
-export default function parse(input) {
-  var cursor = new Cursor(input);
-  return content(cursor);
-}
-
-export function content(cursor, closeTag) {
-  const closeTest = closeTag && new RegExp(`</${closeTag}>`, 'i');
-  var elements = [];
-
-  while (!cursor.eof) {
-    var textElement = text(cursor);
-    if (textElement) {
-      elements.push(textElement);
-    }
-    var tagElement = tag(cursor);
-    if (tagElement) {
-      elements.push(tagElement);
-    }
-    if (closeTest && cursor.capture(closeTest)) {
-      return elements;
-    }
+export default class Parser {
+  parse(input) {
+    this.cursor = new Cursor(input);
+    return this.content();
   }
 
-  if (closeTest) {
-    throw new Error(`Expecting closing tag </${closeTag}> at line ${cursor.lineNumber}`);
-  }
+  content(closeTag) {
+    const closeTest = closeTag && new RegExp(`^</${closeTag}>`, 'i');
+    var elements = [];
 
-  return elements;
-}
+    // returns true if we encounter closeTag
+    const tryCapture = capture => {
+      // check for closing tag before we capture anything:
+      if (closeTag && this.cursor.capture(closeTest)){
+        return true;
+      } else {
+        var elt = capture();
+        if (elt) {
+          elements.push(elt);
+        }
+      }
+    };
 
-export function tag(cursor) {
-  var startTag = captureStartTag(cursor);
-  if (startTag) {
-    if (!startTag.selfClosing) {
-      startTag.children = content(cursor, startTag.rawName);
+    while (!this.cursor.eof) {
+      if (
+        tryCapture(()=>this.tag()) ||
+        tryCapture(()=>this.text())
+      ) {
+        return elements;
+      }
     }
-    return startTag;
-  }
-}
 
-export function text(cursor) {
-  var textElement = { type: 'text', blocks: [] };
-  var rawText;
-
-  function captureAndStoreInterpolation() {
-    var interpolationElement = cursor.capture(/^{\s*([^}]*)}/);
-    if (interpolationElement) {
-      textElement.blocks.push({
-        type: 'interpolation',
-        accessor: interpolationElement[1].trim(' ')
-      });
-      return true;
+    if (closeTag) {
+      throw new Error(`Expecting closing tag </${closeTag}> at line ${this.cursor.lineNumber}`);
     }
+
+    return elements;
   }
 
-  // cursor may start with an interpolation...
-  captureAndStoreInterpolation();
+  tag() {
+    const index = this.cursor.index;
+    const tagMatch = this.cursor.capture(/^<(\/?\w+)/);
+    if (tagMatch) {
+      const rawName = tagMatch[1];
+      const attrs = this.captureAttributes(this.cursor);
+      const endBracket = this.cursor.capture(/^\s*(\/)?>/);
+      const name = rawName.toLowerCase();
+      const selfClosing = (endBracket[1]==='/');
 
-  while (rawText = captureTextUntilBreak(cursor)) {
-    textElement.blocks.push(rawText);
-    if (!captureAndStoreInterpolation() && cursor.test(/^\w/)) {
-      // the next element isn't an interpolation, so must be a tag or EOF
-      break;
-    }
-  }
+      if (!endBracket) {
+        throw new Error(`Missing end bracket while parsing tag '${this.cursor.peek(index, 10)}...' at line ${this.cursor.lineNumber}`);
+      }
 
-  return textElement.blocks.length>0 ? textElement : null;
-}
+      if (name[0]==='/') {
+        throw new Error(`Unexpected closing tag <${rawName}> at line ${this.cursor.lineNumber}`);
+      }
 
-function captureTextUntilBreak(cursor) {
-  var blocks = [];
-  var text;
-  while (text=cursor.capture(/^\s*([^<{])*/)) {
-    if (cursor.test(/^(\\{)|(\\<)|(.<[^\w/])/, -1)) { // false alarm
-      // this is not a break, capture the character and continue...
-      blocks.push(text[0] + cursor.next());
-    } else {
-      blocks.push(text[0]);
-      return blocks.join('');
-    }
-  }
-}
+      const children = selfClosing ? [] : this.content(rawName);
 
-function captureAttributes(cursor) {
-  const attribRE = /^\s*([^=<>"'\s]+)\s*=\s*((?:"([^"]*)")|([-+]?[0-9]*\.?[0-9]+)|(?:{([^}]*)}))/;
-  var attribs = {};
-  var match;
-
-  while (match = cursor.capture(attribRE)) {
-    var variable = match[1];
-    if (match[3]) { // string
-      attribs[variable] = match[3];
-    } else if (match[4]) { //number
-      attribs[variable] = parseFloat(match[4]);
-    } else if (match[5]) { //interpolation
-      debugger;
-      attribs[variable] = {
-        type: 'interpolation',
-        accessor: match[5].trim(' ')
+      return {
+        type: 'tag',
+        name, children, rawName, attrs, selfClosing
       };
     }
   }
-  return attribs;
-}
 
-function captureStartTag(cursor) {
-  var index = cursor.index;
-  var tagMatch = cursor.capture(/^<(\w+)/);
-  if (tagMatch) {
-    var tagName = tagMatch[1];
-    var attrs = captureAttributes(cursor);
-    var endBracket = cursor.capture(/^\s*(\/)?>/);
-
-    if (!endBracket) {
-      throw new Error(`Error while parsing tag '${cursor.peek(index, 10)}...' at line ${cursor.lineNumber}`);
-    }
-
-    return {
-      type: 'tag',
-      name: tagName.toLowerCase(),
-      rawName: tagName,
-      attrs,
-      children: [],
-      selfClosing: endBracket[1]==='/'
+  text() {
+    const textElement = { type: 'text', blocks: [] };
+    const captureAndStoreInterpolation = () => {
+      var interpolationElement = this.cursor.capture(/^{\s*([^}]*)}/);
+      if (interpolationElement) {
+        textElement.blocks.push({
+          type: 'interpolation',
+          accessor: interpolationElement[1].trim(' ')
+        });
+        return true;
+      }
     };
+    const isEmptyTextElement = (t) => t.blocks.length===0 || (t.blocks.length===1 && /^\s*$/.test(t.blocks[0]));
+
+    // this.cursor may start with an interpolation...
+    captureAndStoreInterpolation();
+
+    var rawText;
+    while (rawText = this.captureTextUntilBreak()) {
+      if (rawText.length===0) {
+        break;
+      }
+      textElement.blocks.push(rawText);
+      if (!captureAndStoreInterpolation() && this.cursor.test(/^\w/)) {
+        // the next element isn't an interpolation, so must be a tag or EOF
+        break;
+      }
+    }
+    // remove whitespace-only containing blocks:
+    return isEmptyTextElement(textElement) ? null : textElement;
+  }
+
+  captureTextUntilBreak() {
+    var blocks = [];
+    var text;
+    while (text=this.cursor.capture(/^\s*([^<{}>])*/)) {
+      // detect {{ << escape sequences, and non-tag angle bracket
+      var escapedText = this.cursor.capture(/^({{|}}|<<|>>)/);
+      if (escapedText) {
+        // this is not a break, capture the character and continue...
+        blocks.push(text[0] + escapedText[0][0]);
+      } else {
+        blocks.push(text[0]);
+        return blocks.join('');
+      }
+    }
+    return blocks.length>0 ? blocks.join('') : null;
+  }
+
+  captureAttributes() {
+    const attribRE = /^\s*([^=<>"'\s]+)\s*=\s*((?:"([^"]*)")|([-+]?[0-9]*\.?[0-9]+)|(?:{([^}]*)}))/;
+    var attribs = {};
+    var match;
+
+    while (match = this.cursor.capture(attribRE)) {
+      var variable = match[1];
+      if (match[3]) { // string
+        attribs[variable] = match[3];
+      } else if (match[4]) { //number
+        attribs[variable] = parseFloat(match[4]);
+      } else if (match[5]) { //interpolation
+        attribs[variable] = {
+          type: 'interpolation',
+          accessor: match[5].trim(' ')
+        };
+      }
+    }
+    return attribs;
   }
 }
-

@@ -46,8 +46,8 @@ export default class Cursor {
    * @returns {Object?} match
    * @memberof Cursor
    */
-  capture(re) {
-    var match = this.eof ? null : re.exec(this._buffer.slice(this._index));
+  capture(re, offset=0) {
+    var match = this.eof ? null : re.exec(this._buffer.slice(this._index + offset));
     if (match) {
       this._index += match[0].length + match.index;
     }

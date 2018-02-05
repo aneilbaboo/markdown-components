@@ -49,28 +49,35 @@ var customizedMarkdown = `
 Custom components:
 <Box lineSize=2 color={ user.favoriteColor }>
 Can contain...
-# Markdown
-And _markdown_ can contain custom components:
+# Markdown with interpolation:
+"This box should be *{ user.favoriteColor }*"
+And the _markdown_ can contain custom components:
 <Box lineSize=1 color="red">
 which can contain *more markdown*
-and so on
+and so on.
+Render open curly brace and open angle bracket: {{ and <<
 </Box>
 </Box>`;
 
+// render the markdown with your custom components,
+// providing context variables:
 var html = toHTML({
   input: customizedMarkdown,
   components: components,
+  context: { user: { favoriteColor: 'blue' }},
   markdownEngine: markdownEngine
 });
 console.log(html); // ~=>
 // Custom components:
 // <div style="border-width:2; background-color>
 // Can contain...
-// <h1> Markdown</h1>
-// And <i>markdown</i> can contain custom components:
+// <h1> Markdown with interpolation:</h1>
+// This box should be <b>blue</b>
+// And the <i>markdown</i> can contain custom components:
 // <div style="border-width:1; background-color:red>
 // which can contain <b>more markdown</b>
-// and so on
+// and so on.
+// Render open curly brace and open angle bracket: { and &lt
 // </div>
 // </div>
 ```
@@ -106,14 +113,15 @@ toHTML({
 // "<div class=my-component>a=interpolated;b=123;c=hello</div>"
 ```
 
-### parse
+### Parser
 
-Generates a parsed tree from component markdown input text.
+Class for parsing component markdown input text.
 
 Note that this function doesn't parse Markdown. Markdown parsing is currently done by the renderer. This is expected to change in future.
 
 ```javascript
-var parsedElements = parse(`<MyComponent a={ x.y.z } b=123 c="hello">
+var parser = new Parser();
+var parsedElements = parser.parse(`<MyComponent a={ x.y.z } b=123 c="hello">
 # Please note
 Currently, markdown is parsed
 * during the rendering step
@@ -123,7 +131,8 @@ Currently, markdown is parsed
 // [
 //   {
 //     type: 'tag',
-//     name: 'MyComponent',
+//     name: 'mycomponent',
+//     rawName: 'MyComponent',
 //     attribs: {
 //       a: { accessor: 'x.y.z' },
 //       b: 123,
@@ -137,7 +146,7 @@ Currently, markdown is parsed
 //     ]
 //   }
 // ]
-````
+```
 
 ### Renderer
 
@@ -272,7 +281,8 @@ var renderer = new Renderer({
   }
 });
 
-var parsedElements = parse('<Box color={user.favoriteColor}>_Here is some_ *markdown*</Box>');
+var parser = new Parser();
+var parsedElements = parser.parse('<Box color={user.favoriteColor}>_Here is some_ *markdown*</Box>');
 
 // red box
 stream = streams.getWriteableStream();
