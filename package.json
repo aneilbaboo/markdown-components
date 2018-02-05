@@ -3,6 +3,7 @@
   "version": "0.3.0",
   "description": "Add user-safe, React-like components to your favorite markdown engine",
   "main": "lib/markdown-components.js",
+  "browser": "lib/markdown-components.min.js",
   "repository": "https://github.com/aneilbaboo/markdown-components",
   "author": "Aneil Mallavarapu",
   "license": "MIT",
