@@ -1,8 +1,8 @@
 import streams from 'memory-streams';
 import Renderer from './renderer';
-import parse from './parser';
+import Parser from './parser';
 
-export { Renderer, parse };
+export { Renderer, Parser };
 
 /**
  * toHTML - Combines parsing and rendering in one easy step
@@ -19,11 +19,15 @@ export { Renderer, parse };
   * @returns {string} HTML
   */
 export function toHTML({ input, components, markdownEngine, context }) {
+  var parser = new Parser();
+  var parsedInput = parser.parse(input);
+
   var renderer = new Renderer({
     components: components,
     markdownEngine: markdownEngine
   });
   var stream = new streams.WritableStream();
-  renderer.write(parse(input), context, stream);
+
+  renderer.write(parsedInput, context, stream);
   return stream.toString();
 }

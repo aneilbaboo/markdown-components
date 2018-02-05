@@ -1,4 +1,4 @@
-import { parse, Renderer, toHTML } from '../src';
+import { Parser, Renderer, toHTML } from '../src';
 import fs from 'fs';
 import { expect } from 'chai';
 import path from 'path';
@@ -7,14 +7,17 @@ import MarkdownIt from 'markdown-it';
 import streams from 'memory-streams';
 
 const markdown = new MarkdownIt();
-const example = fs.readFileSync(path.join(__dirname, 'complex-example.md'));
+//const example = fs.readFileSync(path.join(__dirname, 'example.md'));
 
 describe('Renderer', function () {
   var renderer;
   var components;
   var markdownEngine;
+  var parse;
 
   beforeEach(function() {
+    var parser = new Parser();
+    parse = input => parser.parse(input);
     components =  {
       SimpleComponent: function ({ __children, a }, render) {
         render('<div class="simple-component">');
@@ -36,7 +39,6 @@ describe('Renderer', function () {
 
   context('toHTML', function () {
     it('should create HTML in one step', function () {
-
       var result = toHTML({
         input: ('<SimpleComponent a={ x.y }>\n' +
         '  <SimpleComponent a=123>\n' +
