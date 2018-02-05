@@ -11,6 +11,7 @@
     "debugTest": "mocha --inspect-brk --require babel-core/register --colors ./test/*.spec.js",
     "dev": "WEBPACK_ENV=dev webpack --progress --colors --watch",
     "prepublish": "npm run build",
+    "lint": "eslint ./src/**/*.js",
     "test": "mocha --require babel-core/register --colors ./test/*.spec.js",
     "watch": "mocha --require babel-core/register --colors -w ./test/*.spec.js"
   },
