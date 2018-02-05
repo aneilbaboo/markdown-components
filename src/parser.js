@@ -40,19 +40,17 @@ export default class Parser {
   }
 
   tag() {
-    const index = this.cursor.index;
     const tagMatch = this.cursor.capture(/^<(\/?\w+)/);
     if (tagMatch) {
       const rawName = tagMatch[1];
       const attrs = this.captureAttributes(this.cursor);
       const endBracket = this.cursor.capture(/^\s*(\/)?>/);
       const name = rawName.toLowerCase();
-      const selfClosing = (endBracket[1]==='/');
 
       if (!endBracket) {
-        throw new Error(`Missing end bracket while parsing tag '${
-          this.cursor.peek(index, 10)
-        }...' at line ${
+        throw new Error(`Missing end bracket while parsing '<${
+          rawName
+        } ...' at line ${
           this.cursor.lineNumber
         }`);
       }
@@ -61,6 +59,7 @@ export default class Parser {
         throw new Error(`Unexpected closing tag <${rawName}> at line ${this.cursor.lineNumber}`);
       }
 
+      const selfClosing = (endBracket[1]==='/');
       const children = selfClosing ? [] : this.content(rawName);
 
       return {
@@ -89,14 +88,8 @@ export default class Parser {
 
     var rawText;
     while (rawText = this.captureTextUntilBreak()) {
-      if (rawText.length===0) {
-        break;
-      }
       textElement.blocks.push(rawText);
-      if (!captureAndStoreInterpolation() && this.cursor.test(/^\w/)) {
-        // the next element isn't an interpolation, so must be a tag or EOF
-        break;
-      }
+      captureAndStoreInterpolation();
     }
     // remove whitespace-only containing blocks:
     return isEmptyTextElement(textElement) ? null : textElement;
@@ -116,7 +109,8 @@ export default class Parser {
         return blocks.join('');
       }
     }
-    return blocks.length>0 ? blocks.join('') : null;
+
+    return blocks.join('');
   }
 
   captureAttributes() {
@@ -128,9 +122,9 @@ export default class Parser {
       var variable = match[1];
       if (match[3]) { // string
         attribs[variable] = match[3];
-      } else if (match[4]) { //number
+      } else if (match[4]) { // number
         attribs[variable] = parseFloat(match[4]);
-      } else if (match[5]) { //interpolation
+      } else { // at this point it must be interpolation
         attribs[variable] = {
           type: 'interpolation',
           accessor: match[5].trim(' ')

@@ -92,8 +92,4 @@ export default class Cursor {
     var stringToCurrentIndex = this._buffer.slice(0, this._index).toString();
     return stringToCurrentIndex.split(/\r\n|\r|\n/).length;
   }
-
-  toString() {
-    return `Cursor{${this._index}}"${this.peek()}"`;
-  }
 }

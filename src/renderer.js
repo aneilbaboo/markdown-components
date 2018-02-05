@@ -1,4 +1,5 @@
 import { isObject, isArray, isString } from 'lodash';
+import { isNumber } from 'util';
 
 /**
  * Renderer
@@ -16,7 +17,7 @@ import { isObject, isArray, isString } from 'lodash';
 export default class Renderer {
   constructor({ components, markdownEngine, defaultComponent, interpolator }) {
     this._components = {};
-    for (var key in components || {}) {
+    for (var key in components) {
       this._components[key.toLowerCase()] = components[key];
     }
     this._defaultComponent = defaultComponent;
@@ -35,7 +36,7 @@ export default class Renderer {
   writeElement(elt, context, stream) {
     const _this = this;
     const render = function (obj) {
-      if (isString(obj)) {
+      if (isString(obj) || isNumber(obj)) {
         stream.write(obj);
       } else {
         _this.write(obj, context, stream);
@@ -47,22 +48,18 @@ export default class Renderer {
       this.renderTextElement(elt, context, render);
     } else {
       // or a component:
-      const component = this.componentFromElement(elt) || this._defaultComponent;
-      if (component) {
-        // inject __name and __children into props
-        const interpolatedAttributes = Object.assign(
-          { __name: elt.name, __children: elt.children },
-          interpolateAttributes(elt.attrs, context, _this._interpolator)
-        );
-        component(interpolatedAttributes, render);
-      }
+      const component = this.componentFromElement(elt);
+      // inject __name and __children into props
+      const interpolatedAttributes = Object.assign(
+        { __name: elt.name, __children: elt.children },
+        interpolateAttributes(elt.attrs, context, _this._interpolator)
+      );
+      component(interpolatedAttributes, render);
     }
   };
 
   write(elt, context, stream) {
-    if (!elt) {
-      return;
-    } else if (isArray(elt)) {
+    if (isArray(elt)) {
       var _this = this;
       var elements = elt;
       elements.forEach(function (elt) {
@@ -89,9 +86,7 @@ function standardInterpolator(variables, accessor) {
     if (accessor.length===0) {
       return variables;
     } else {
-      if (variables) {
-        return standardInterpolator(variables[accessor[0]], accessor.slice(1));
-      }
+      return standardInterpolator(variables[accessor[0]], accessor.slice(1));
     }
   } else {
     return standardInterpolator(variables, accessor.split('.'));
@@ -100,14 +95,12 @@ function standardInterpolator(variables, accessor) {
 
 function interpolateAttributes(attrs, context, interpolator) {
   var props = {};
-  if (attrs) {
-    for (var key in attrs) {
-      var value = attrs[key];
-      if (isObject(value)) {
-        props[key] = interpolator(context, value.accessor);
-      } else {
-        props[key] = value;
-      }
+  for (var key in attrs) {
+    var value = attrs[key];
+    if (isObject(value)) {
+      props[key] = interpolator(context, value.accessor);
+    } else {
+      props[key] = value;
     }
   }
   return props;
