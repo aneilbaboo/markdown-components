@@ -1,6 +1,11 @@
 {
   "presets": [
     "stage-3",
-    ["env", { "targets": { "node": true } }]
-  ]
+    [ "env", { "targets": { "node": true } } ]
+  ],
+  "env": {
+    "test": {
+       "plugins": [ "istanbul" ]
+    }
+  }
 }

@@ -65,3 +65,7 @@ lib/markdown-components.js
 lib/markdown-components.js.map
 lib/markdown-components.min.js
 lib/markdown-components.min.js.map
+
+# coverage
+coverage/
+.nyc_output

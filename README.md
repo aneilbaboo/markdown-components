@@ -16,7 +16,7 @@ E.g.,
 </Box>
 ```
 
-# Install
+## Install
 
 ```javascript
 npm i markdown-components
@@ -50,7 +50,7 @@ Custom components:
 <Box lineSize=2 color={ user.favoriteColor }>
 Can contain...
 # Markdown with interpolation:
-"This box should be *{ user.favoriteColor }*"
+This box should be *{ user.favoriteColor }*
 And the _markdown_ can contain custom components:
 <Box lineSize=1 color="red">
 which can contain *more markdown*
@@ -118,6 +118,8 @@ toHTML({
 Class for parsing component markdown input text.
 
 Note that this function doesn't parse Markdown. Markdown parsing is currently done by the renderer. This is expected to change in future.
+
+#### parse 
 
 ```javascript
 var parser = new Parser();
