@@ -261,13 +261,12 @@ var html = toHTML({
 
 ## Separately Parse and Render
 
-If you're rendering the same content many times, it's more efficient to parse once and render the results many times. 
+If you're concerned about efficiency, parse the input first, and cache the result (a plain JSON object). Call Renderer.write with different contexts:
 
 ### Example
 ```javascript
-var { markdownItEngine, Renderer, Parser } = require('markdown-components');
-var markdownItEngine = (new require('markdown-it'))(); // npm i markdown-it
-var streams = require('memory-streams'); // npm i memory-streams
+var { markdownItEngine, Renderer, Parser } = require('markdown-components'); // remember to "npm i markdown-it"
+var streams = require('memory-streams'); // "npm i memory-streams"
 var renderer = new Renderer({
   componets: {
     Box({ __children, color }, render) {
