@@ -1,5 +1,6 @@
 import { isObject, isArray, isString } from 'lodash';
 import { isNumber } from 'util';
+import assert from 'assert';
 
 /**
  * Renderer
@@ -7,7 +8,6 @@ import { isNumber } from 'util';
  * @param {any} options
  * @param {Object} components - { componentName: function (renderer, tagName, attrs, children, stream)
  *                              => writes HTML to stream, ... }
- * @param {Function} markdownEngine - function (markdown, render) => writes HTML to stream
  * @param {Function} defaultComponent - function (renderer, tagName, attrs, children, stream)
  * @param {Function} interpolator - optional interpolation function (variables, expr) => value (default is standardInterpolator)
  *
@@ -15,14 +15,13 @@ import { isNumber } from 'util';
  * interpolator uses the expression inside {} to extract a value from variables
  */
 export default class Renderer {
-  constructor({ components, markdownEngine, defaultComponent, interpolator }) {
+  constructor({ components, defaultComponent, interpolator }) {
     this._components = {};
     for (var key in components) {
       this._components[key.toLowerCase()] = components[key];
     }
     this._defaultComponent = defaultComponent;
     this._interpolator = interpolator || standardInterpolator;
-    this._markdownEngine = markdownEngine;
   }
 
   componentFromElement(element) {
@@ -73,11 +72,14 @@ export default class Renderer {
   }
 
   renderTextElement(textElement, context, render) {
-    var interpolatedMarkdown = textElement.blocks.map(block=>
-      block.type==='interpolation' ? this._interpolator(context, block.accessor) : block
-    ).join('');
-
-    this._markdownEngine(interpolatedMarkdown, render);
+    textElement.blocks.forEach(block => {
+      if (isString(block)) {
+        render(block);
+      } else {
+        assert(block.type==='interpolation');
+        render(this._interpolator(context, block.accessor));
+      }
+    });
   }
 }
 

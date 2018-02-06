@@ -1,36 +1,52 @@
 import { toHTML } from '../src';
-import MarkdownIt from 'markdown-it';
 import { expect } from 'chai';
-const markdown = new MarkdownIt();
+import { evilStreakMarkdownEngine, showdownEngine } from '../src/engines';
 
 describe('toHTML', function() {
-  it('should create HTML in one step', function() {
-    const components = {
-      SimpleComponent: function({ __children, a }, render) {
-        render('<div class="simple-component">');
-        render(`a=${a}:${typeof a}\n`);
-        render(__children);
-        render('</div>');
-      }
-    };
+  const components = {
+    SimpleComponent: function({ __children, a }, render) {
+      render('<div class="simple-component">');
+      render(`a=${a}:${typeof a}\n`);
+      render(__children);
+      render('</div>');
+    }
+  };
 
-    const markdownEngine = function(text, render) {
-      render(markdown.render(text));
-    };
-
+  it('should create HTML in one step with evilStreakEngine', function() {  
     var result = toHTML({
       input:
         '<SimpleComponent a={ x.y }>\n' +
         '  <SimpleComponent a=123>\n' +
+        '# Heading with interpolation - { x.y }\n' +
         '  </SimpleComponent>\n' +
         '</SimpleComponent>',
       components: components,
-      markdownEngine: markdownEngine,
-      context: { x: { y: 'hello' } }
+      markdownEngine: evilStreakMarkdownEngine(),
+      context: { x: { y: 'hello' }}
     });
 
     expect(result).to.be.a('string');
     expect(result).to.have.string('a=hello:string');
     expect(result).to.have.string('a=123:number');
+    expect(result).to.have.string('<h1>Heading with interpolation - hello</h1>');
+  });
+
+  it('should create HTML in one step with showdownEngine', function () {
+    var result = toHTML({
+      input:
+        '<SimpleComponent a={ x.y }>\n' +
+        '  <SimpleComponent a=123>\n' +
+        '# Heading with interpolation - { x.y }\n' +
+        '  </SimpleComponent>\n' +
+        '</SimpleComponent>',
+      components: components,
+      markdownEngine: showdownEngine(),
+      context: { x: { y: 'hello' }}
+    });
+
+    expect(result).to.be.a('string');
+    expect(result).to.have.string('a=hello:string');
+    expect(result).to.have.string('a=123:number');
+    expect(result).to.have.string('<h1>Heading with interpolation - hello</h1>');
   });
 });

@@ -99,12 +99,14 @@ Simple one step method for generating HTML.
 Parses and renders Markdown with components to HTML, interpolating context variables.
 
 ```javascript
+// requires: npm install markdown-it
+import { markdownItEngine, toHTML } from 'markdown-components';
 toHTML({
   input: '<MyComponent a={ x.y } b=123 c="hello"># This is {<InlineComponent/>} a heading</MyComponent>, 
   components: {
     MyComponent({a, b, c}, render) { render(`<div class=my-component>a=${a};b=${b};c=${c}</div>`); }
   },
-  markdownEngine(mdText, render) { render(markdown.render(mdText)); },
+  markdownEngine: markdownItEngine(),
   context:{ x: { y: "interpolated" } }
   // defaultComponent,
   // interpolator
@@ -122,28 +124,31 @@ Note that this function doesn't parse Markdown. Markdown parsing is currently do
 #### parse 
 
 ```javascript
-var parser = new Parser();
+import { Parser, showdownEngine } from 'markdown-components';
+var parser = new Parser({markdownEngine:}); // use showdownjs
 var parsedElements = parser.parse(`<MyComponent a={ x.y.z } b=123 c="hello">
-# Please note
-Currently, markdown is parsed
-* during the rendering step
+# User likes { user.color } color
 </MyComponent>
 `);
 // =>
 // [
 //   {
-//     type: 'tag',
+//     type: "tag",
 //     name: 'mycomponent',
 //     rawName: 'MyComponent',
 //     attribs: {
-//       a: { accessor: 'x.y.z' },
+//       a: { accessor: "x.y.z" },
 //       b: 123,
 //       c: "hello"
 //     }
 //     children: [
 //       {
-//         type: 'text',
-//         data: '# Please note\nCurrently, markdown is parsed\n* during the rendering step\n" 
+//         type: "text",
+//         blocks: [
+//           "<h1>User likes ",
+//           { type: "interpolation", accessor: "user.color" }
+//           "color</h1>"
+//         ]
 //       }
 //     ]
 //   }
@@ -159,7 +164,6 @@ A class representing the rendering logic.
 ```javascript
 var renderer = new Renderer({
   components: Object // { componentName: ({__name, __children, ...atrs})=>{}, ...}
-  markdownEngine: Function // (markdown, render) => {}
   defaultComponent: Function // ({__name, __children, ...attrs}, render) = > {..render html }
   interpolator: Function // (context, accessor) => value
 });
@@ -176,7 +180,7 @@ var html = stream.toString();
 
 ### Components
 
-The components argument is an object where keys are tag names, and functions render HTML. You must pass this argument to both the `Renderer` constructor and `toHTML` functions.
+The components argument is an object where keys are tag names, and functions render HTML. This is a required argument of the `Renderer` constructor and the `toHTML` function.
 
 For example:
 
@@ -246,15 +250,10 @@ toHTML({
 
 ### Markdown Engine
 
-You'll need to install a Markdown interpreter and write a wrapper function. You'll provide this to either the `Renderer` constructor or `toHTML` function:
+A number of wrappers for existing Markdown interpreters are provided in `src/engines.js`. Each is a function which returns a rendering function. There are wrappers MarkdownIt, ShowdownJS and evilStreak's markdown. It's easy to write your own wrapper. See the source file.
 
 ```javascript
-var MarkdownIt = require('markdown-it');
-var markdown = new MarkdownIt();
-
-var markdownItEngine = function (mdText, render) {
-  render(markdown.render(mdText));
-};
+import { toHTML, markdownItEngine } from 'markdown-components';
 
 var html = toHTML({
   markdownEngine: markdownItEngine,
@@ -268,7 +267,8 @@ If you're rendering the same content many times, it's more efficient to parse on
 
 ### Example
 ```javascript
-var markdown = (new require('markdown-it'))(); // npm i markdown-it
+var { markdownItEngine, Renderer, Parser } = require('markdown-components');
+var markdownItEngine = (new require('markdown-it'))(); // npm i markdown-it
 var streams = require('memory-streams'); // npm i memory-streams
 var renderer = new Renderer({
   componets: {
@@ -276,14 +276,11 @@ var renderer = new Renderer({
       render(`<div class="box" style="background-color:${color}">`);
       render(__children);
       render(`</div>`);
-    },
-    markdownEngine(input, render) {
-      render(markdown.render(input));
     }
   }
 });
 
-var parser = new Parser();
+var parser = new Parser({ markdownEngine: markdownItEnginer() });
 var parsedElements = parser.parse('<Box color={user.favoriteColor}>_Here is some_ *markdown*</Box>');
 
 // red box

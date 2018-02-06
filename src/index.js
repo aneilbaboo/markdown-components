@@ -1,7 +1,7 @@
 import streams from 'memory-streams';
 import Renderer from './renderer';
 import Parser from './parser';
-
+export * from './engines';
 export { Renderer, Parser };
 
 /**
@@ -19,12 +19,11 @@ export { Renderer, Parser };
   * @returns {string} HTML
   */
 export function toHTML({ input, components, markdownEngine, context }) {
-  var parser = new Parser();
+  var parser = new Parser({ markdownEngine });
   var parsedInput = parser.parse(input);
 
   var renderer = new Renderer({
-    components: components,
-    markdownEngine: markdownEngine
+    components: components
   });
   var stream = new streams.WritableStream();
 
