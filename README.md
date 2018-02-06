@@ -100,7 +100,7 @@ Parses and renders Markdown with components to HTML, interpolating context varia
 // requires: npm install markdown-it
 import { markdownItEngine, toHTML } from 'markdown-components';
 toHTML({
-  input: '<MyComponent a={ x.y } b=123 c="hello"># This is {<InlineComponent/>} a heading</MyComponent>, 
+  input: '<MyComponent a={ x.y } b=123 c="hello"># This is {<InlineComponent/>} a heading</MyComponent>', 
   components: {
     MyComponent({a, b, c}, render) { render(`<div class=my-component>a=${a};b=${b};c=${c}</div>`); }
   },
