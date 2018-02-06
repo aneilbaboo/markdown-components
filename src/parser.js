@@ -2,16 +2,17 @@ import Cursor from './cursor';
 import crypto from 'crypto';
 import streams from 'memory-streams';
 import { isFunction } from 'lodash';
+import error from './error';
 
 export default class Parser {
-  constructor(options) {
-    const { markdownEngine, interpolationPoint } = options;
+  constructor({ markdownEngine, interpolationPoint, indentedMarkdown=true }) {
     if (!isFunction(markdownEngine)) {
       throw new Error('Invalid markdownEngine');
     }
     this._markdownEngine = markdownEngine;
     this._interpolationPoint = interpolationPoint || crypto.randomBytes(32).toString('hex');
-  }
+    this._indentedMarkdown = indentedMarkdown;
+}
 
   parse(input) {
     this.cursor = new Cursor(input);
@@ -45,7 +46,7 @@ export default class Parser {
     }
 
     if (closeTag) {
-      throw new Error(`Expecting closing tag </${closeTag}> at line ${this.cursor.lineNumber}`);
+      error(`Expecting closing tag </${closeTag}>`, this.cursor, 'noClosingTag');
     }
 
     return elements;
@@ -60,15 +61,17 @@ export default class Parser {
       const name = rawName.toLowerCase();
 
       if (!endBracket) {
-        throw new Error(`Missing end bracket while parsing '<${
+        error(`Missing end bracket while parsing '<${
           rawName
-        } ...' at line ${
-          this.cursor.lineNumber
-        }`);
+        } ...'`, this.cursor, 'missingBracket');
       }
 
       if (name[0]==='/') {
-        throw new Error(`Unexpected closing tag <${rawName}> at line ${this.cursor.lineNumber}`);
+        error(
+          `Unexpected closing tag <${rawName}>`,
+          this.cursor,
+          'unexpectedClosingTag'
+        );
       }
 
       const selfClosing = (endBracket[1]==='/');
