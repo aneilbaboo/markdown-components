@@ -1,6 +1,18 @@
 import Cursor from './cursor';
+import crypto from 'crypto';
+import streams from 'memory-streams';
+import { isFunction } from 'lodash';
 
 export default class Parser {
+  constructor(options) {
+    const { markdownEngine, interpolationPoint } = options;
+    if (!isFunction(markdownEngine)) {
+      throw new Error('Invalid markdownEngine');
+    }
+    this._markdownEngine = markdownEngine;
+    this._interpolationPoint = interpolationPoint || crypto.randomBytes(32).toString('hex');
+  }
+
   parse(input) {
     this.cursor = new Cursor(input);
     return this.content();
@@ -70,29 +82,71 @@ export default class Parser {
   }
 
   text() {
-    const textElement = { type: 'text', blocks: [] };
+    debugger;
+    const [textBlocks, interpolationElements] = this.captureTextAndInterpolations();
+    const renderedTextBlocks = this.renderMarkdownBlocks(textBlocks);
+    const blocks = this.zipTextAndInterpolation(renderedTextBlocks, interpolationElements);
+
+    if (blocks.length>0) {
+      return {
+        type: 'text',
+        blocks: blocks,
+      };
+    }
+  }
+
+  zipTextAndInterpolation(textBlocks, interpolationElements) {
+    const blocks = [];
+    var i=0;
+    while (textBlocks.length>i || interpolationElements>i) {
+      const [text, interpolation] = [textBlocks[i], interpolationElements[i]];
+      if (text && text.length>0) {
+        blocks.push(text);
+      }
+      if (interpolation) {
+        blocks.push(interpolation);
+      }
+      i++;
+    }
+    // remove empty text elements before returning
+    return blocks.filter(block=>block!=='');
+  }
+
+  renderMarkdownBlocks(textBlocks) {
+    const textWithInterpolationPoints = textBlocks.join('');
+    const stream = new streams.WritableStream();
+    const render = htmlText => stream.write(htmlText);
+    this._markdownEngine(textWithInterpolationPoints, render);
+    const processedTextWithInterpolationPoints = stream.toString();
+    const processedTextBlocks = processedTextWithInterpolationPoints.split(this._interpolationPoint);
+    return processedTextBlocks;
+  }
+
+  captureTextAndInterpolations() {
+    const interpolationElements = [];
+    const textBlocks = [];
     const captureAndStoreInterpolation = () => {
       var interpolationElement = this.cursor.capture(/^{\s*([^}]*)}/);
       if (interpolationElement) {
-        textElement.blocks.push({
+        interpolationElements.push({
           type: 'interpolation',
           accessor: interpolationElement[1].trim(' ')
         });
+        textBlocks.push(this._interpolationPoint);
         return true;
       }
     };
-    const isEmptyTextElement = (t) => t.blocks.length===0 || (t.blocks.length===1 && /^\s*$/.test(t.blocks[0]));
 
     // this.cursor may start with an interpolation...
     captureAndStoreInterpolation();
 
     var rawText;
     while (rawText = this.captureTextUntilBreak()) {
-      textElement.blocks.push(rawText);
+      textBlocks.push(rawText);
       captureAndStoreInterpolation();
     }
-    // remove whitespace-only containing blocks:
-    return isEmptyTextElement(textElement) ? null : textElement;
+
+    return [textBlocks, interpolationElements];
   }
 
   captureTextUntilBreak() {
@@ -134,3 +188,4 @@ export default class Parser {
     return attribs;
   }
 }
+

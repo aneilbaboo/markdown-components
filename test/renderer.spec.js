@@ -1,23 +1,17 @@
-import { Parser, Renderer, toHTML } from '../src';
-import fs from 'fs';
+import { Parser, Renderer } from '../src';
 import { expect } from 'chai';
-import path from 'path';
 import _ from 'lodash';
-import MarkdownIt from 'markdown-it';
 import streams from 'memory-streams';
-
-const markdown = new MarkdownIt();
-//const example = fs.readFileSync(path.join(__dirname, 'example.md'));
+import { markdownItEngine } from '../src/engines';
 
 describe('Renderer', function () {
   var components;
-  var markdownEngine;
   var parse;
 
   context('write', function () {
 
     beforeEach(function() {
-      var parser = new Parser();
+      var parser = new Parser({ markdownEngine: markdownItEngine() });
       parse = input => parser.parse(input);
       components =  {
         SimpleComponent: function ({ __children, a }, render) {
@@ -27,16 +21,11 @@ describe('Renderer', function () {
           render('</div>');
         }
       };
-
-      markdownEngine = function (text, render) {
-        render(markdown.render(text));
-      };
     });
 
     it('should render a float attribute', function () {
       const renderer = new Renderer({
-        components: components,
-        markdownEngine: markdownEngine
+        components: components
       });
       const dom = parse('<SimpleComponent a=1.09 />');
       const stream = new streams.WritableStream();
@@ -48,8 +37,7 @@ describe('Renderer', function () {
 
     it('should render a string attribute', function () {
       const renderer = new Renderer({
-        components: components,
-        markdownEngine: markdownEngine
+        components: components
       });
       const dom = parse('<SimpleComponent a="abc" />');
       const stream = new streams.WritableStream();
@@ -61,8 +49,7 @@ describe('Renderer', function () {
 
     it('should render an interpolated attribute', function () {
       const renderer = new Renderer({
-        components: components,
-        markdownEngine: markdownEngine
+        components: components
       });
       const dom = parse('<SimpleComponent a={x.y} />');
       const stream = new streams.WritableStream();
@@ -74,8 +61,7 @@ describe('Renderer', function () {
 
     it('should render an interpolated attribute, ignoring spaces', function () {
       const renderer = new Renderer({
-        components: components,
-        markdownEngine: markdownEngine
+        components: components
       });
       const dom = parse('<SimpleComponent a={ x.y } />');
       const stream = new streams.WritableStream();
@@ -87,8 +73,7 @@ describe('Renderer', function () {
 
     it('should render subcomponents', function () {
       const renderer = new Renderer({
-        components: components,
-        markdownEngine: markdownEngine
+        components: components
       });
       const dom = parse(
         '<SimpleComponent a={ x.y }>\n' +
@@ -105,8 +90,7 @@ describe('Renderer', function () {
 
     it('should render markdown inside a component', function () {
       const renderer = new Renderer({
-        components: components,
-        markdownEngine: markdownEngine
+        components: components
       });
       const dom = parse(
         '<SimpleComponent>\n' +
@@ -128,8 +112,7 @@ describe('Renderer', function () {
 
     it('should interpolate curly brace expressions inside markdown', function () {
       const renderer = new Renderer({
-        components: components,
-        markdownEngine: markdownEngine
+        components: components
       });
       const dom = parse(
         '<SimpleComponent>\n' +
@@ -146,8 +129,7 @@ describe('Renderer', function () {
 
     it('should throw an error if an invalid object is provided', function () {
       const renderer = new Renderer({
-        components: components,
-        markdownEngine: markdownEngine
+        components: components
       });
       const stream = new streams.WritableStream();
       class X {};
@@ -167,9 +149,6 @@ describe('Renderer', function () {
             render(__children);
             render('</div>');
           }
-        },
-        markdownEngine: function (text, render) {
-          render(markdown.render(text));
         }
       });
 
@@ -188,7 +167,6 @@ describe('Renderer', function () {
       it('and defaultComponent is provided,', function () {
         const renderer = new Renderer({
           components: components,
-          markdownEngine: markdownEngine,
           defaultComponent(attrs, render) {
             render('<div class="default">');
             render(`a=>${attrs.a};b=>${attrs.b};c=>${attrs.c}`);
@@ -209,8 +187,7 @@ describe('Renderer', function () {
 
       it('and defaultComponent is not provided,', function () {
         const renderer = new Renderer({
-          components: components,
-          markdownEngine: markdownEngine
+          components: components
         });
         const dom = parse('<default a=123 b="hello" c={val}></default>');
         expect(()=>renderer.write(dom, { val: 'myval' })).to.throw();
