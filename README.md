@@ -25,13 +25,7 @@ npm i markdown-components
 ## Quick start
 
 ```javascript
-var { toHTML } = require("markdown-components");
-var markdown = (new require('markdown-it'))(); // npm i markdown-it
-
-// a function for rendering HTML using your favorite markdown engine:
-var markdownEngine = function(mdText, render) {
-  render(markdown.render(mdText)); // render the results
-};
+var { toHTML, markdownItEngine } = require("markdown-components");
 
 // define a Box component:
 var components = {
@@ -65,7 +59,7 @@ var html = toHTML({
   input: customizedMarkdown,
   components: components,
   context: { user: { favoriteColor: 'blue' }},
-  markdownEngine: markdownEngine
+  markdownEngine: markdownItEngine()
 });
 console.log(html); // ~=>
 // Custom components:
