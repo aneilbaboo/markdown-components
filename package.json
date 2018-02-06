@@ -1,6 +1,6 @@
 {
   "name": "markdown-components",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Add user-safe, React-like components to your favorite markdown engine",
   "main": "lib/markdown-components.js",
   "browser": "lib/markdown-components.min.js",
@@ -12,7 +12,7 @@
     "report": "nyc report",
     "debugTest": "mocha --inspect-brk --require babel-core/register --colors ./test/*.spec.js",
     "dev": "WEBPACK_ENV=dev webpack --progress --colors --watch",
-    "prepublish": "npm run build",
+    "prepare": "npm run build",
     "lint": "eslint ./src/**/*.js",
     "test": "cross-env NODE_ENV=test nyc mocha",
     "watch": "mocha --require babel-core/register --colors -w ./test/**/*.spec.js"

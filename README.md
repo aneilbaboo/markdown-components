@@ -20,6 +20,10 @@ E.g.,
 
 ```javascript
 npm i markdown-components
+// plus your favorite markdown engine
+// npm i markdown
+// npm i showdown
+// npm i markdown-it
 ```
 
 ## Quick start
