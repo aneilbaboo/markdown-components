@@ -88,8 +88,17 @@ export default class Cursor {
     }
   }
 
-  get lineNumber() {
+  get lines() {
     var stringToCurrentIndex = this._buffer.slice(0, this._index).toString();
-    return stringToCurrentIndex.split(/\r\n|\r|\n/).length;
+    return stringToCurrentIndex.split(/\r\n|\r|\n/);
+  }
+
+  get lineNumber() {
+    return this.lines.length;
+  }
+
+  get columnNumber() {
+    const lastLine = this.lines[this.lineNumber-1];
+    return lastLine ? lastLine.length + 1 : 1;
   }
 }

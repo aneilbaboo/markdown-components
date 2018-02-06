@@ -138,4 +138,38 @@ describe('Cursor', function () {
       expect(cursor.next(3)).to.be.null;
     });
   });
+
+  context('when reporting location', function () {
+    var cursor;
+    beforeEach(function () {
+      cursor = new Cursor('123456789\n1234\n123456789');
+    });
+
+    it('should report 1:1 values at the beginning', function () {
+      cursor.seek(0);
+      expect(cursor.lineNumber).to.equal(1);
+      expect(cursor.columnNumber).to.equal(1);
+    });
+
+    it('should report lineNumber 0 on the first line, but the correct column number', function () {
+      cursor.seek(5);
+      expect(cursor.lineNumber).to.equal(1);
+      expect(cursor.columnNumber).to.equal(6); // 1-indexing 5=>6
+      cursor.seek(7);
+      expect(cursor.lineNumber).to.equal(1);
+      expect(cursor.columnNumber).to.equal(8);
+    });
+
+    it('should report lineNumber 1 when just before the first carriage return', function () {
+      cursor.seek(9);
+      expect(cursor.lineNumber).to.equal(1);
+      expect(cursor.columnNumber).to.equal(10);
+    });
+
+    it('should report the correct line and column when in the last line', function () {
+      cursor.seek(20);
+      expect(cursor.lineNumber).to.equal(3);
+      expect(cursor.columnNumber).to.equal(6);
+    });
+  });
 });
