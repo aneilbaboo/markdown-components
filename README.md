@@ -43,7 +43,6 @@ var components = {
 };
 
 // use the Box component:
-// Note how Markdown can be indented:
 var customizedMarkdown = `
 Custom components:
 <Box lineSize=2 color={ user.favoriteColor }>
@@ -108,7 +107,7 @@ Will be displayed on a red background
 
 ## Rationale
 
-I created Markdown components to provide a content authoring language with custom components which would be safe for use by end-users.
+Markdown components provides a content authoring language with custom components which is safe for use by end-users.
 
 |           |JSX-Markdown | markdown-it-shortcodes | markdown-components |
 |:----------|:-----------:|:----------------------:|:-------------------:|
@@ -156,7 +155,7 @@ Class for parsing component markdown input text.
 Note that this function doesn't parse Markdown. Markdown parsing is currently done by the renderer. This is expected to change in future.
 
 
-## constructor arguments
+#### constructor arguments
 
 * `markdownEngine` (required)
   The markdown engine function (required).
