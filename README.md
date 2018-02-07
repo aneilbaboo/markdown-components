@@ -43,18 +43,19 @@ var components = {
 };
 
 // use the Box component:
+// Note how Markdown can be indented:
 var customizedMarkdown = `
 Custom components:
 <Box lineSize=2 color={ user.favoriteColor }>
-Can contain...
-# Markdown with interpolation:
-This box should be *{ user.favoriteColor }*
-And the _markdown_ can contain custom components:
-<Box lineSize=1 color="red">
-which can contain *more markdown*
-and so on.
-Render open curly brace and open angle bracket: {{ and <<
-</Box>
+  Can contain...
+  # Markdown with interpolation:
+  This box should be *{ user.favoriteColor }*
+  And the _markdown_ can contain custom components:
+  <Box lineSize=1 color="red">
+    which can contain *more markdown*
+    and so on.
+    Render open curly brace and open angle bracket: {{ and <<
+  </Box>
 </Box>`;
 
 // render the markdown with your custom components,
@@ -66,25 +67,56 @@ var html = toHTML({
   markdownEngine: markdownItEngine()
 });
 console.log(html); // ~=>
-// Custom components:
+// <p>Custom components:</p>
 // <div style="border-width:2; background-color>
-// Can contain...
+// <p>Can contain...</p>
 // <h1> Markdown with interpolation:</h1>
-// This box should be <b>blue</b>
-// And the <i>markdown</i> can contain custom components:
+// <p>This box should be <b>blue</b>
+// And the <i>markdown</i> can contain custom components:</p>
 // <div style="border-width:1; background-color:red>
-// which can contain <b>more markdown</b>
+// <p>which can contain <b>more markdown</b>
 // and so on.
-// Render open curly brace and open angle bracket: { and &lt
+// Render open curly brace and open angle bracket: { and &lt</p>
 // </div>
 // </div>
 ```
 
+### Custom Components
+
+The components argument to `toHTML` and `Renderer.write` provides functions that generate HTML.
+
+For example:
+
+```javascript
+{
+  Box: function ({__name, __children, color}, render) {
+    // generate custom HTML:
+    render(`<div class="box" style="background-color:${color}">`);
+    render(__children); // render elements between start and end tag
+    render(`</div>`);
+  }
+}
+```
+
+Allows you to write:
+```html
+<Box color="red">
+# This markdown
+Will be displayed on a red background
+</Box>
+```
+
 ## Rationale
 
-There are a number of JSX-markdown packages which allow developers to use Markdown syntax in their JSX files. In contrast, this library adds custom components to Markdown which can be safely used by end-users.
+I created Markdown components to provide a content authoring language with custom components which would be safe for use by end-users.
 
-JSX-markdown libraries aren't suitable because React interpolation expressions are Javascript. I.e., you'd need to eval user-generated javascript either on your server or another user's browser. You could try evaluating such code in a sandboxed environment, but it's inefficient and asynchronous. The latter specifically rules out using that approach in React front ends, for example, which require synchronous rendering.
+|           |JSX-Markdown | markdown-it-shortcodes | markdown-components |
+|:----------|:-----------:|:----------------------:|:-------------------:|
+| end-users |  unsafe     | safe                   | safe                |
+| nesting   |  yes        | no                     | yes                 |
+| HOCs      |  yes        | no                     | yes                 |
+
+JSX-markdown libraries aren't suitable because React interpolation expressions are Javascript. I.e., you'd need to eval user-generated javascript either on your server or another user's browser. You could try evaluating such code in a sandboxed environment, but it's inefficient and asynchronous. The need for asynchronous evaluation rules out using a sandbox like [jailed](https://github.com/asvd/jailed) in a React client, since React rendering requires synchronous execution.
 
 In this package, interpolation expressions, like `{ a.b }`, are not evaluated, so there is no script injection vulnerability, and inteprolation is a simple synchronous function. End-users only have access to variables you provide in a context object.
 
@@ -92,7 +124,7 @@ In this package, interpolation expressions, like `{ a.b }`, are not evaluated, s
 
 ### toHTML
 
-Simple one step method for generating HTML.
+Easy one step method for generating HTML.
 
 Parses and renders Markdown with components to HTML, interpolating context variables.
 
@@ -100,9 +132,13 @@ Parses and renders Markdown with components to HTML, interpolating context varia
 // requires: npm install markdown-it
 import { markdownItEngine, toHTML } from 'markdown-components';
 toHTML({
-  input: '<MyComponent a={ x.y } b=123 c="hello"># This is {<InlineComponent/>} a heading</MyComponent>', 
+  input: '<MyComponent a={ x.y } b=123 c="hello"># This is an {x.y} heading</MyComponent>', 
   components: {
-    MyComponent({a, b, c}, render) { render(`<div class=my-component>a=${a};b=${b};c=${c}</div>`); }
+    MyComponent({a, b, c, __children}, render) { 
+      render(`<div class=my-component><p>a=${a};b=${b};c=${c}</p>`);
+      render(__children); // renders elements between open and close tag
+      render(`</div>`); 
+    }
   },
   markdownEngine: markdownItEngine(),
   context:{ x: { y: "interpolated" } }
@@ -110,7 +146,7 @@ toHTML({
   // interpolator
 });
 // =>
-// "<div class=my-component>a=interpolated;b=123;c=hello</div>"
+// "<div class=my-component><p>a=interpolated;b=123;c=hello</p><h1>This is an interpolated heading</h1></div>"
 ```
 
 ### Parser
@@ -119,7 +155,18 @@ Class for parsing component markdown input text.
 
 Note that this function doesn't parse Markdown. Markdown parsing is currently done by the renderer. This is expected to change in future.
 
-#### parse 
+
+## constructor arguments
+
+* `markdownEngine` (required)
+  The markdown engine function (required).
+* `indentedMarkdown` (optional, default: true)
+   Allows a contiguous block of Markdown to start at an indentation point without creating a [preformatted code block](https://daringfireball.net/projects/markdown/syntax#precode).
+   This is useful when writing Markdown inside deeply nested components.
+
+#### #parse 
+
+Returns a JSON object representing the parsed markdown.
 
 ```javascript
 import { Parser, showdownEngine } from 'markdown-components';
@@ -157,22 +204,23 @@ var parsedElements = parser.parse(`<MyComponent a={ x.y.z } b=123 c="hello">
 
 A class representing the rendering logic.
 
-#### constructor
+#### constructor arguments
+
+* `components` (required)
+  An object of key:function pairs. Where the key is the componentName (matched case-insensitively with tags in the input text), and function is a function which takes parsed elements as input, and uses the render function to write HTML.
+  `({__name, __children, ...attrs}, render)=>{}`
+* `defaultComponent` (optional)
+  A function called when a matching component cannot be found for a tag. Same function signature as a component.
+* `interpolator` (optional)
+  Takes the context provided to `#write` or `toHTML` and the string inside a `{ }` block, and returns a new value. The default interpolator provides a simple dot-accessor syntax for objects.
+  `standardInterpolator({a: {b: 123}}, "a.b") // => 123`
+
+#### #write
+
+Writes an element (e.g., the result from Parser.parse) to `stream`, interpolating variables from the `context`:
 
 ```javascript
-var renderer = new Renderer({
-  components: Object // { componentName: ({__name, __children, ...atrs})=>{}, ...}
-  defaultComponent: Function // ({__name, __children, ...attrs}, render) = > {..render html }
-  interpolator: Function // (context, accessor) => value
-});
-```
-
-#### write
-
-Writes an element (e.g., the result from parse) to `stream`, interpolating variables from the `context`:
-
-```javascript
-renderer.write(elt, context, stream);
+renderer.write(elements, context, stream);
 var html = stream.toString();
 ```
 
@@ -265,7 +313,7 @@ If you're concerned about efficiency, parse the input first, and cache the resul
 
 ### Example
 ```javascript
-var { markdownItEngine, Renderer, Parser } = require('markdown-components'); // remember to "npm i markdown-it"
+var { markdownItEngine, Renderer, Parser } = require('markdown-components'); // "npm i markdown-it" to use markdownItEngine
 var streams = require('memory-streams'); // "npm i memory-streams"
 var renderer = new Renderer({
   componets: {
