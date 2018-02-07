@@ -2,10 +2,10 @@ import Cursor from './cursor';
 import crypto from 'crypto';
 import streams from 'memory-streams';
 import { isFunction } from 'lodash';
-import error from './error';
+import { error, ErrorType } from './error';
 
 export default class Parser {
-  constructor({ markdownEngine, interpolationPoint, indentedMarkdown=true }) {
+  constructor({ markdownEngine, interpolationPoint, indentedMarkdown }) {
     if (!isFunction(markdownEngine)) {
       throw new Error('Invalid markdownEngine');
     }
@@ -46,7 +46,7 @@ export default class Parser {
     }
 
     if (closeTag) {
-      error(`Expecting closing tag </${closeTag}>`, this.cursor, 'noClosingTag');
+      error(`Expecting closing tag </${closeTag}>`, this.cursor, ErrorType.NoClosingTag);
     }
 
     return elements;
@@ -63,14 +63,16 @@ export default class Parser {
       if (!endBracket) {
         error(`Missing end bracket while parsing '<${
           rawName
-        } ...'`, this.cursor, 'missingBracket');
+        } ...'`,
+        this.cursor,
+        ErrorType.MissingEndBracket);
       }
 
       if (name[0]==='/') {
         error(
           `Unexpected closing tag <${rawName}>`,
           this.cursor,
-          'unexpectedClosingTag'
+          ErrorType.UnexpectedClosingTag
         );
       }
 
@@ -85,6 +87,7 @@ export default class Parser {
   }
 
   text() {
+    debugger;
     const [textBlocks, interpolationElements] = this.captureTextAndInterpolations();
     const renderedTextBlocks = this.renderMarkdownBlocks(textBlocks);
     const blocks = this.zipTextAndInterpolation(renderedTextBlocks, interpolationElements);
@@ -143,17 +146,58 @@ export default class Parser {
     captureAndStoreInterpolation();
 
     var rawText;
+    var startLine = this.cursor.lineNumber;
     while (rawText = this.captureTextUntilBreak()) {
-      textBlocks.push(rawText);
+      if (this._indentedMarkdown) {
+        // if parser allows indented markdown, remove the indent:
+        textBlocks.push(this.removeIndent(rawText, startLine));
+      } else {
+        textBlocks.push(rawText);
+      }
       captureAndStoreInterpolation();
+      startLine = this.cursor.lineNumber;
     }
 
     return [textBlocks, interpolationElements];
   }
 
+  removeIndent(text) {
+    const textBlockLines = text.split('\n');
+    var [startIndex, firstIndent] = this.findFirstIndentedLine(textBlockLines);
+
+    var resultLines = [];
+    for (let lineIndex=startIndex; lineIndex<textBlockLines.length; lineIndex++) {
+      let line = textBlockLines[lineIndex];
+      let lineIndent = getIndent(line);
+      if (lineIndent) {
+        if (lineIndent >= firstIndent) {
+          resultLines.push(line.slice(firstIndent));
+        } else {
+          let cursor = this.cursor;
+          cursor.seek(cursor.lineIndex(startIndex+lineIndex)+firstIndent);
+          error(`Bad indentation in text block "${line}"`, cursor, ErrorType.BadIndentation);
+        }
+      }
+    }
+    return resultLines.join('\n');
+  }
+
+  findFirstIndentedLine(textBlockLines) {
+    var firstIndent;
+    var startIndex;
+    for (startIndex=0; startIndex<textBlockLines.length; startIndex++) {
+      firstIndent = getIndent(textBlockLines[startIndex]);
+      if (firstIndent) {
+        break;
+      }
+    }
+    return [startIndex, firstIndent];
+  }
+
   captureTextUntilBreak() {
     var blocks = [];
     var text;
+
     while (text=this.cursor.capture(/^\s*([^<{}>])*/)) {
       // detect {{ << escape sequences, and non-tag angle bracket
       var escapedText = this.cursor.capture(/^({{|}}|<<|>>)/);
@@ -191,3 +235,8 @@ export default class Parser {
   }
 }
 
+function getIndent(line) {
+  const indentRE = /^(\s*)[^\s]/;
+  const indentMatch = indentRE.exec(line);
+  return indentMatch && indentMatch[1].length;
+}

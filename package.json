@@ -1,6 +1,6 @@
 {
   "name": "markdown-components",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Add user-safe, React-like components to your favorite markdown engine",
   "main": "lib/markdown-components.js",
   "browser": "lib/markdown-components.min.js",

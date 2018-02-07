@@ -88,6 +88,10 @@ export default class Cursor {
     }
   }
 
+  lineIndex(lineNumber) {
+    return this.lines.slice(0, lineNumber).reduce((x,y)=>x.length+y.length, 0);
+  }
+
   get lines() {
     var stringToCurrentIndex = this._buffer.slice(0, this._index).toString();
     return stringToCurrentIndex.split(/\r\n|\r|\n/);
