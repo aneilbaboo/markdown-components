@@ -1,6 +1,19 @@
 import Cursor from './cursor';
+import crypto from 'crypto';
+import streams from 'memory-streams';
+import { isFunction } from 'lodash';
+import { error, ErrorType } from './error';
 
 export default class Parser {
+  constructor({ markdownEngine, interpolationPoint, indentedMarkdown }) {
+    if (!isFunction(markdownEngine)) {
+      throw new Error('Invalid markdownEngine');
+    }
+    this._markdownEngine = markdownEngine;
+    this._interpolationPoint = interpolationPoint || crypto.randomBytes(32).toString('hex');
+    this._indentedMarkdown = indentedMarkdown;
+}
+
   parse(input) {
     this.cursor = new Cursor(input);
     return this.content();
@@ -33,7 +46,7 @@ export default class Parser {
     }
 
     if (closeTag) {
-      throw new Error(`Expecting closing tag </${closeTag}> at line ${this.cursor.lineNumber}`);
+      error(`Expecting closing tag </${closeTag}>`, this.cursor, ErrorType.NoClosingTag);
     }
 
     return elements;
@@ -48,15 +61,19 @@ export default class Parser {
       const name = rawName.toLowerCase();
 
       if (!endBracket) {
-        throw new Error(`Missing end bracket while parsing '<${
+        error(`Missing end bracket while parsing '<${
           rawName
-        } ...' at line ${
-          this.cursor.lineNumber
-        }`);
+        } ...'`,
+        this.cursor,
+        ErrorType.MissingEndBracket);
       }
 
       if (name[0]==='/') {
-        throw new Error(`Unexpected closing tag <${rawName}> at line ${this.cursor.lineNumber}`);
+        error(
+          `Unexpected closing tag <${rawName}>`,
+          this.cursor,
+          ErrorType.UnexpectedClosingTag
+        );
       }
 
       const selfClosing = (endBracket[1]==='/');
@@ -70,34 +87,117 @@ export default class Parser {
   }
 
   text() {
-    const textElement = { type: 'text', blocks: [] };
+    debugger;
+    const [textBlocks, interpolationElements] = this.captureTextAndInterpolations();
+    const renderedTextBlocks = this.renderMarkdownBlocks(textBlocks);
+    const blocks = this.zipTextAndInterpolation(renderedTextBlocks, interpolationElements);
+
+    if (blocks.length>0) {
+      return {
+        type: 'text',
+        blocks: blocks,
+      };
+    }
+  }
+
+  zipTextAndInterpolation(textBlocks, interpolationElements) {
+    const blocks = [];
+    var i=0;
+    while (textBlocks.length>i || interpolationElements>i) {
+      const [text, interpolation] = [textBlocks[i], interpolationElements[i]];
+      if (text && text.length>0) {
+        blocks.push(text);
+      }
+      if (interpolation) {
+        blocks.push(interpolation);
+      }
+      i++;
+    }
+    // remove empty text elements before returning
+    return blocks.filter(block=>block!=='');
+  }
+
+  renderMarkdownBlocks(textBlocks) {
+    const textWithInterpolationPoints = textBlocks.join('');
+    const stream = new streams.WritableStream();
+    const render = htmlText => stream.write(htmlText);
+    this._markdownEngine(textWithInterpolationPoints, render);
+    const processedTextWithInterpolationPoints = stream.toString();
+    const processedTextBlocks = processedTextWithInterpolationPoints.split(this._interpolationPoint);
+    return processedTextBlocks;
+  }
+
+  captureTextAndInterpolations() {
+    const interpolationElements = [];
+    const textBlocks = [];
     const captureAndStoreInterpolation = () => {
       var interpolationElement = this.cursor.capture(/^{\s*([^}]*)}/);
       if (interpolationElement) {
-        textElement.blocks.push({
+        interpolationElements.push({
           type: 'interpolation',
           accessor: interpolationElement[1].trim(' ')
         });
+        textBlocks.push(this._interpolationPoint);
         return true;
       }
     };
-    const isEmptyTextElement = (t) => t.blocks.length===0 || (t.blocks.length===1 && /^\s*$/.test(t.blocks[0]));
 
     // this.cursor may start with an interpolation...
     captureAndStoreInterpolation();
 
     var rawText;
+    var startLine = this.cursor.lineNumber;
     while (rawText = this.captureTextUntilBreak()) {
-      textElement.blocks.push(rawText);
+      if (this._indentedMarkdown) {
+        // if parser allows indented markdown, remove the indent:
+        textBlocks.push(this.removeIndent(rawText, startLine));
+      } else {
+        textBlocks.push(rawText);
+      }
       captureAndStoreInterpolation();
+      startLine = this.cursor.lineNumber;
     }
-    // remove whitespace-only containing blocks:
-    return isEmptyTextElement(textElement) ? null : textElement;
+
+    return [textBlocks, interpolationElements];
+  }
+
+  removeIndent(text) {
+    const textBlockLines = text.split('\n');
+    var [startIndex, firstIndent] = this.findFirstIndentedLine(textBlockLines);
+
+    var resultLines = [];
+    for (let lineIndex=startIndex; lineIndex<textBlockLines.length; lineIndex++) {
+      let line = textBlockLines[lineIndex];
+      let lineIndent = getIndent(line);
+      if (lineIndent) {
+        if (lineIndent >= firstIndent) {
+          resultLines.push(line.slice(firstIndent));
+        } else {
+          let cursor = this.cursor;
+          cursor.seek(cursor.lineIndex(startIndex+lineIndex)+firstIndent);
+          error(`Bad indentation in text block "${line}"`, cursor, ErrorType.BadIndentation);
+        }
+      }
+    }
+    return resultLines.join('\n');
+  }
+
+  findFirstIndentedLine(textBlockLines) {
+    var firstIndent;
+    var startIndex;
+    for (startIndex=0; startIndex<textBlockLines.length; startIndex++) {
+      firstIndent = getIndent(textBlockLines[startIndex]);
+      if (firstIndent) {
+        break;
+      }
+    }
+    return [startIndex, firstIndent];
   }
 
   captureTextUntilBreak() {
     var blocks = [];
     var text;
+
     while (text=this.cursor.capture(/^\s*([^<{}>])*/)) {
       // detect {{ << escape sequences, and non-tag angle bracket
       var escapedText = this.cursor.capture(/^({{|}}|<<|>>)/);
@@ -133,4 +233,10 @@ export default class Parser {
     }
     return attribs;
   }
+}
+
+function getIndent(line) {
+  const indentRE = /^(\s*)[^\s]/;
+  const indentMatch = indentRE.exec(line);
+  return indentMatch && indentMatch[1].length;
 }
