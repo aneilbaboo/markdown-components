@@ -20,10 +20,10 @@ jobs:
 
       # Download and cache dependencies
       - restore_cache:
-        keys:
-        - v1-dependencies-{{ checksum "package.json" }}
-        # fallback to using the latest cache if no exact match is found
-        - v1-dependencies-
+          keys:
+          - v1-dependencies-{{ checksum "package.json" }}
+          # fallback to using the latest cache if no exact match is found
+          - v1-dependencies-
 
       - run: yarn install --dev
 
@@ -45,7 +45,7 @@ jobs:
             ./cc-test-reporter before-build
             yarn lint && yarn test
             cd coverage
-            ../cc-test-reporter after-build -t clover --exit-code $?
+            ../cc-test-reporter after-build --debug -t clover --exit-code $?
   
 
 
