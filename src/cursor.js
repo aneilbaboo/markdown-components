@@ -89,7 +89,16 @@ export default class Cursor {
   }
 
   lineIndex(lineNumber) {
-    return this.lines.slice(0, lineNumber).reduce((x,y)=>x.length+y.length, 0);
+    const lines = this._buffer.toString().split('\n');
+    const selectedLines = lines.slice(0, lineNumber-1);
+    var total = 0;
+    if (lineNumber<1 || lineNumber>lines.length) {
+      throw new Error(`Line number out of range ${lineNumber}`);
+    }
+    selectedLines.forEach(line=> {
+      total += line.length + 1;
+    });
+    return total;
   }
 
   get lines() {
