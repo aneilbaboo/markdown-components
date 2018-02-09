@@ -163,18 +163,19 @@ export default class Parser {
 
   removeIndent(text) {
     const textBlockLines = text.split('\n');
-    var [startIndex, firstIndent] = this.findFirstIndentedLine(textBlockLines);
+    var [startLine, firstIndent] = this.findFirstIndentedLine(textBlockLines);
 
     var resultLines = [];
-    for (let lineIndex=startIndex; lineIndex<textBlockLines.length; lineIndex++) {
+    for (let lineIndex=startLine; lineIndex<textBlockLines.length; lineIndex++) {
       let line = textBlockLines[lineIndex];
       let lineIndent = getIndent(line);
       if (lineIndent) {
         if (lineIndent >= firstIndent) {
           resultLines.push(line.slice(firstIndent));
         } else {
+          // found a dedent - forbidden!
           let cursor = this.cursor;
-          cursor.seek(cursor.lineIndex(startIndex+lineIndex)+firstIndent);
+          cursor.seek(cursor.lineIndex(startLine+lineIndex)+firstIndent);
           error(`Bad indentation in text block "${line}"`, cursor, ErrorType.BadIndentation);
         }
       }
@@ -184,14 +185,14 @@ export default class Parser {
 
   findFirstIndentedLine(textBlockLines) {
     var firstIndent;
-    var startIndex;
-    for (startIndex=0; startIndex<textBlockLines.length; startIndex++) {
-      firstIndent = getIndent(textBlockLines[startIndex]);
+    var startLine;
+    for (startLine=0; startLine<textBlockLines.length; startLine++) {
+      firstIndent = getIndent(textBlockLines[startLine]);
       if (firstIndent) {
         break;
       }
     }
-    return [startIndex, firstIndent];
+    return [startLine, firstIndent];
   }
 
   captureTextUntilBreak() {
