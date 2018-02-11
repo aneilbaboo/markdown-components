@@ -174,9 +174,11 @@ export default class Parser {
           resultLines.push(line.slice(firstIndent));
         } else {
           // found a dedent - forbidden!
+          // position cursor at the location where problem was detected
           let cursor = this.cursor;
-          cursor.seek(cursor.lineIndex(startLine+lineIndex)+firstIndent);
-          error(`Bad indentation in text block "${line}"`, cursor, ErrorType.BadIndentation);
+          let lineNumber = startLine+lineIndex+1; // lineNumber is 1-indexed, so add 1
+          cursor.seek(cursor.lineIndex(lineNumber)+lineIndent);
+          error('Bad indentation in text block', cursor, ErrorType.BadIndentation);
         }
       }
     }
