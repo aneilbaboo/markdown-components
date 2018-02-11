@@ -172,4 +172,28 @@ describe('Cursor', function () {
       expect(cursor.columnNumber).to.equal(6);
     });
   });
+
+  context('#lineIndex', function () {
+    var cursor;
+    beforeEach(function () {
+      cursor = new Cursor('01234\n6789\n123456789\n');
+    });
+
+    it('should return 0 for lineNumber 1', function () {
+      expect(cursor.lineIndex(1)).to.equal(0);
+    });
+
+    it('should throw for lineNumber<1', function () {
+      expect(()=>cursor.lineIndex(0)).to.throw();
+      expect(()=>cursor.lineIndex(-2)).to.throw();
+    });
+
+    it('should return the index of the first character of the second line for lineNumber=2', function () {
+      expect(cursor.lineIndex(2)).to.equal(6);
+    });
+
+    it('should return the index of the first character of the third line for lineNumber=3', function () {
+      expect(cursor.lineIndex(3)).to.equal(11);
+    });
+  });
 });

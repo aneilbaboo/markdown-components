@@ -120,6 +120,41 @@ describe('Parser', function () {
           }
         ]);
       });
+
+      context('when invalid indentation is encountered,', function () {
+
+        it('should detect invalid indentation (if indentedMarkdown is true)', function () {
+          var testFn;
+          var parser = new Parser({
+            indentedMarkdown: true,             // TRUE
+            markdownEngine: markdownItEngine()
+          });
+
+          var testFn = ()=>parser.parse(
+            '     # Here is some indented markdown\n'+
+            '     with some valid text\n' +
+            '   and some invalid dedented text\n'+
+            '     and some valid indented text'
+          );
+          expect(testFn).to.throw(Error, 'Bad indentation in text block at 3:4');
+        });
+
+        it('should ignore indentation if indentedMarkdown is false', function () {
+          var testFn;
+          var parser = new Parser({
+            indentedMarkdown: false,            // FALSE
+            markdownEngine: markdownItEngine()
+          });
+
+          var testFn = ()=>parser.parse(
+            '     # Here is some indented markdown\n'+
+            '     with some valid text\n' +
+            '   and some invalid dedented text'+
+            '     and some valid indented text'
+          );
+          expect(testFn).to.not.throw();
+        });
+      });
     });
 
     it('should parse interpolation only', function () {
