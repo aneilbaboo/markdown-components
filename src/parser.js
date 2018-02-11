@@ -87,7 +87,6 @@ export default class Parser {
   }
 
   text() {
-    debugger;
     const [textBlocks, interpolationElements] = this.captureTextAndInterpolations();
     const renderedTextBlocks = this.renderMarkdownBlocks(textBlocks);
     const blocks = this.zipTextAndInterpolation(renderedTextBlocks, interpolationElements);
