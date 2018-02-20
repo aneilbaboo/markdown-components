@@ -3,12 +3,12 @@
 # Check https://circleci.com/docs/2.0/language-javascript/ for more details
 #
 version: 2
-machine:
-  environment:  
-    CC_TEST_REPORTER_ID: 8a731d38e836a895f196159fd5a7ca8b1c84fd2f778f0256bcbcf6ff03fbcd1a
 
 jobs:
   build:
+    environment:  
+      CC_TEST_REPORTER_ID: a8fab361c54d385e2546963e7c0fec083fe1920b9e520ce86dd31f0971a11ffe
+    
     docker:
       # specify the version you desire here
       - image: circleci/node:9.4.0
@@ -26,6 +26,7 @@ jobs:
           - v1-dependencies-
 
       - run: yarn install --dev
+         
 
       - save_cache:
           paths:
@@ -44,8 +45,7 @@ jobs:
           command: |
             ./cc-test-reporter before-build
             yarn lint && yarn test
-            cd coverage
-            ../cc-test-reporter after-build --debug -t clover --exit-code $?
+            ./cc-test-reporter after-build --debug -t lcov --exit-code $?
   
 
 
