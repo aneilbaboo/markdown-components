@@ -45,7 +45,7 @@ jobs:
             ./cc-test-reporter before-build
             yarn lint && yarn test
             cd coverage
-            ../cc-test-reporter after-build --debug -t clover --exit-code $?
+            ../cc-test-reporter after-build --debug -t lcov --exit-code $?
   
 
 
