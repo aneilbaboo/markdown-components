@@ -1,10 +1,10 @@
-[![CircleCI](https://circleci.com/gh/aneilbaboo/markdown-components.svg?style=shield&circle-token=fbb8592a984a41740eebf952734f4776b86b0504)](https://circleci.com/gh/aneilbaboo/markdown-components)
+[![CircleCI](https://circleci.com/gh/aneilbaboo/markdown-components.svg?style=shield&circle-token=fbb8592a984a41740eebf952734f4776b86b0504)](https://circleci.com/gh/aneilbaboo/markdown-components) [![Maintainability](https://api.codeclimate.com/v1/badges/6cf1a9deec6c8def6f8e/maintainability)](https://codeclimate.com/github/aneilbaboo/markdown-components/maintainability) [![Test Coverage](https://api.codeclimate.com/v1/badges/6cf1a9deec6c8def6f8e/test_coverage)](https://codeclimate.com/github/aneilbaboo/markdown-components/test_coverage)
 
 # markdown-components
 
 Add custom React-like components to Markdown which can be safely used by end-users. Use with your favorite Markdown engine.
 
-E.g., 
+E.g.,
 ```html
 <Box color={user.favoriteColor} lineWidth=3>
   ## subheading
@@ -131,12 +131,12 @@ Parses and renders Markdown with components to HTML, interpolating context varia
 // requires: npm install markdown-it
 import { markdownItEngine, toHTML } from 'markdown-components';
 toHTML({
-  input: '<MyComponent a={ x.y } b=123 c="hello"># This is an {x.y} heading</MyComponent>', 
+  input: '<MyComponent a={ x.y } b=123 c="hello"># This is an {x.y} heading</MyComponent>',
   components: {
-    MyComponent({a, b, c, __children}, render) { 
+    MyComponent({a, b, c, __children}, render) {
       render(`<div class=my-component><p>a=${a};b=${b};c=${c}</p>`);
       render(__children); // renders elements between open and close tag
-      render(`</div>`); 
+      render(`</div>`);
     }
   },
   markdownEngine: markdownItEngine(),
@@ -163,7 +163,7 @@ Note that this function doesn't parse Markdown. Markdown parsing is currently do
    Allows a contiguous block of Markdown to start at an indentation point without creating a [preformatted code block](https://daringfireball.net/projects/markdown/syntax#precode).
    This is useful when writing Markdown inside deeply nested components.
 
-#### #parse 
+#### #parse
 
 Returns a JSON object representing the parsed markdown.
 
