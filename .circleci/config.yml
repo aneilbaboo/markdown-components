@@ -3,8 +3,12 @@
 # Check https://circleci.com/docs/2.0/language-javascript/ for more details
 #
 version: 2
+
 jobs:
   build:
+    environment:  
+      CC_TEST_REPORTER_ID: a8fab361c54d385e2546963e7c0fec083fe1920b9e520ce86dd31f0971a11ffe
+    
     docker:
       # specify the version you desire here
       - image: circleci/node:9.4.0
@@ -22,13 +26,26 @@ jobs:
           - v1-dependencies-
 
       - run: yarn install --dev
+         
 
       - save_cache:
           paths:
             - node_modules
           key: v1-dependencies-{{ checksum "package.json" }}
         
+      - run:
+          name: Download Code Climate test-reporter
+          command: |
+            curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+            chmod +x ./cc-test-reporter
+      
       # run tests!
-      - run: yarn lint && yarn test
+      - run:
+          name: Run Tests and Code Coverage
+          command: |
+            ./cc-test-reporter before-build
+            yarn lint && yarn test
+            ./cc-test-reporter after-build --debug -t lcov --exit-code $?
+  
 
 
