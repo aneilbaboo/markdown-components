@@ -1,27 +1,28 @@
-import { expect } from 'chai';
 import fs from 'fs';
 import path from 'path';
 
 import Parser from '../src/parser';
 import { markdownItEngine } from '../src/engines';
+import toBeType from 'jest-tobetype';
+expect.extend(toBeType);
 
 describe('Parser', function () {
   context('constructor', function () {
     it("should throw an error if markdownEngine isn't provided", function () {
-      expect(()=>new Parser({})).to.throw();
+      expect(()=>new Parser({})).toThrow();
     });
 
     it('should take an interpolationPoint argument which sets the string for splitting text on interpolations', function () {
       var parser = new Parser({ markdownEngine:()=>{}, interpolationPoint: 'abcdefg' });
-      expect(parser._interpolationPoint).to.equal('abcdefg');
+      expect(parser._interpolationPoint).toEqual('abcdefg');
     });
 
     it('should generate a random interpolationPoint if none is given', function () {
       var parser1 = new Parser({ markdownEngine:()=>{} });
       var parser2 = new Parser({ markdownEngine:()=>{} });
-      expect(parser1._interpolationPoint.length).to.equal(64);
-      expect(parser2._interpolationPoint.length).to.equal(64);
-      expect(parser1._interpolationPoint).to.not.equal(parser2._interpolationPoint);
+      expect(parser1._interpolationPoint).toHaveLength(64);
+      expect(parser2._interpolationPoint).toHaveLength(64);
+      expect(parser1._interpolationPoint).not.toEqual(parser2._interpolationPoint);
     });
   });
 
@@ -36,10 +37,10 @@ describe('Parser', function () {
 
     it('should parse a text block', function () {
       var elements = parse('Some text');
-      expect(elements).to.be.an('array');
-      expect(elements.length).to.equal(1);
-      expect(elements[0].type).to.equal('text');
-      expect(elements[0].blocks).to.deep.equal(['<p>Some text</p>']);
+      expect(elements).toBeType('array');
+      expect(elements).toHaveLength(1);
+      expect(elements[0].type).toEqual('text');
+      expect(elements[0].blocks).toEqual(['<p>Some text</p>']);
     });
 
     it('should parse recursive tags', function () {
@@ -47,27 +48,27 @@ describe('Parser', function () {
         '  <Inner a=123>\n' +
         '  </Inner>\n' +
         '</Outer>');
-      expect(elements).to.be.an('array');
-      expect(elements.length).to.equal(1);
-      expect(elements[0].type).to.equal('tag');
-      expect(elements[0].name).to.equal('outer');
-      expect(elements[0].children.length).to.equal(1);
-      expect(elements[0].children[0].name).to.equal('inner');
+      expect(elements).toBeType('array');
+      expect(elements).toHaveLength(1);
+      expect(elements[0].type).toEqual('tag');
+      expect(elements[0].name).toEqual('outer');
+      expect(elements[0].children).toHaveLength(1);
+      expect(elements[0].children[0].name).toEqual('inner');
     });
 
     it('should parse tags with no spaces', function () {
       var elements = parse('<Outer><inner></inner></outer>');
-      expect(elements).to.be.an('array');
-      expect(elements[0].name).to.equal('outer');
-      expect(elements[0].children[0].name).to.equal('inner');
+      expect(elements).toBeType('array');
+      expect(elements[0].name).toEqual('outer');
+      expect(elements[0].children[0].name).toEqual('inner');
     });
 
     it('should correctly parse an interpolation followed by a tag', function () {
       var elements = parse('<Outer>{test}<inner></inner></outer>');
-      expect(elements).to.be.an('array');
-      expect(elements[0].name).to.equal('outer');
-      expect(elements[0].children[0].type).to.equal('text');
-      expect(elements[0].children[1].name).to.equal('inner');
+      expect(elements).toBeType('array');
+      expect(elements[0].name).toEqual('outer');
+      expect(elements[0].children[0].type).toEqual('text');
+      expect(elements[0].children[1].name).toEqual('inner');
     });
 
     context('indentation', function () {
@@ -81,7 +82,7 @@ describe('Parser', function () {
           '    Some text\n'
         );
 
-        expect(elements[0]).to.deep.equal({
+        expect(elements[0]).toEqual({
           type: 'text',
           blocks: ['<pre><code># Heading\nSome text\n</code></pre>']
         });
@@ -96,7 +97,7 @@ describe('Parser', function () {
           '    # Heading\n' +
           '    Some text\n'
         );
-        expect(elements[0]).to.deep.equal({
+        expect(elements[0]).toEqual({
           type: 'text',
           blocks: ['<h1>Heading</h1>\n<p>Some text</p>']
         });
@@ -113,20 +114,55 @@ describe('Parser', function () {
           '    Some text\n' +
           '</mytag>\n'
         );
-        expect(elements[0].children).to.deep.equal([
+        expect(elements[0].children).toEqual([
           {
             type: 'text',
             blocks: ['<h1>Heading</h1>\n<p>Some text</p>']
           }
         ]);
       });
+
+      context('when invalid indentation is encountered,', function () {
+
+        it('should detect invalid indentation (if indentedMarkdown is true)', function () {
+          var testFn;
+          var parser = new Parser({
+            indentedMarkdown: true,             // TRUE
+            markdownEngine: markdownItEngine()
+          });
+
+          var testFn = ()=>parser.parse(
+            '     # Here is some indented markdown\n'+
+            '     with some valid text\n' +
+            '   and some invalid dedented text\n'+
+            '     and some valid indented text'
+          );
+          expect(testFn).toThrow(Error, 'Bad indentation in text block at 3:4');
+        });
+
+        it('should ignore indentation if indentedMarkdown is false', function () {
+          var testFn;
+          var parser = new Parser({
+            indentedMarkdown: false,            // FALSE
+            markdownEngine: markdownItEngine()
+          });
+
+          var testFn = ()=>parser.parse(
+            '     # Here is some indented markdown\n'+
+            '     with some valid text\n' +
+            '   and some invalid dedented text'+
+            '     and some valid indented text'
+          );
+          expect(testFn).not.toThrow();
+        });
+      });
     });
 
     it('should parse interpolation only', function () {
       var elements = parse('{ someVar }');
-      expect(elements).to.be.an('array');
-      expect(elements[0].type).to.equal('text');
-      expect(elements[0].blocks).to.deep.equal([
+      expect(elements).toBeType('array');
+      expect(elements[0].type).toEqual('text');
+      expect(elements[0].blocks).toEqual([
         '<p>',
         { type: 'interpolation', accessor: 'someVar' },
         '</p>'
@@ -135,24 +171,24 @@ describe('Parser', function () {
 
     context('with bad input', function () {
       it("should throw an error if closing tag isn't present", function () {
-        expect(()=>parse('<outer><inner></inner>')).to.throw();
+        expect(()=>parse('<outer><inner></inner>')).toThrow();
       });
 
       it('should throw an error if invalid closing tag is encountered', function () {
-        expect(()=>parse('<outer><inner></outer>')).to.throw();
+        expect(()=>parse('<outer><inner></outer>')).toThrow();
       });
 
       it('should throw an error if an invalid attribute is given', function () {
-        expect(()=>parse('<tag a=1 b=[123]></tag>')).to.throw();
-        expect(()=>parse("<tag a=1 b='123'></tag>")).to.throw();
+        expect(()=>parse('<tag a=1 b=[123]></tag>')).toThrow();
+        expect(()=>parse("<tag a=1 b='123'></tag>")).toThrow();
       });
 
       it('should throw an error if an attribute interpolation is unclosed', function () {
-        expect(()=>parse('<tag a={></tag>')).to.throw();
+        expect(()=>parse('<tag a={></tag>')).toThrow();
       });
 
       it('should throw an error if the tag end brace is missing', function () {
-        expect(()=>parse('<tag</tag>')).to.throw();
+        expect(()=>parse('<tag</tag>')).toThrow();
       });
     });
 
@@ -164,13 +200,13 @@ describe('Parser', function () {
       });
 
       it('should return an array containing objects representing the parsed HTML tree', function () {
-        expect(parseResult).to.be.an('array');
-        expect(parseResult.length).to.equal(5);
+        expect(parseResult).toBeType('array');
+        expect(parseResult).toHaveLength(5);
       });
 
       it('should interpolate into markdown', function () {
-        expect(parseResult[0].type).to.equal('text');
-        expect(parseResult[0].blocks).to.deep.equal([
+        expect(parseResult[0].type).toEqual('text');
+        expect(parseResult[0].blocks).toEqual([
           '<h1>heading1</h1>\n<p>Text after and interpolation ',
           { type: 'interpolation', accessor: 'x.y' },
           ' heading1</p>'
@@ -178,27 +214,27 @@ describe('Parser', function () {
       });
 
       it('should parse a tag within markdown', function () {
-        expect(parseResult[1].type).to.equal('tag');
-        expect(parseResult[1].name).to.equal('div');
-        expect(parseResult[1].children.length).to.equal(1);
+        expect(parseResult[1].type).toEqual('tag');
+        expect(parseResult[1].name).toEqual('div');
+        expect(parseResult[1].children).toHaveLength(1);
       });
 
       it('should parse a self closing tag', function () {
-        expect(parseResult[2].type).to.equal('tag');
-        expect(parseResult[2].name).to.equal('selfclosing');
+        expect(parseResult[2].type).toEqual('tag');
+        expect(parseResult[2].name).toEqual('selfclosing');
       });
 
       it('should parse number, string and interpolated attributes from a component', function () {
-        expect(parseResult[4].type).to.equal('tag');
-        expect(parseResult[4].name).to.equal('mycomponent');
-        expect(parseResult[4].attrs).to.deep.equal({
+        expect(parseResult[4].type).toEqual('tag');
+        expect(parseResult[4].name).toEqual('mycomponent');
+        expect(parseResult[4].attrs).toEqual({
           a: 1, b: 'string', c: { type: 'interpolation', accessor: 'x.y' }
         });
-        expect(parseResult[4].children.length).to.equal(2);
+        expect(parseResult[4].children).toHaveLength(2);
       });
 
       it('should handle curly and angle escapes', function () {
-        expect(parseResult[4].children[0]).to.deep.equal({
+        expect(parseResult[4].children[0]).toEqual({
           type: 'text',
           blocks: [
             '<p>Text inside MyComponent\n' +
@@ -209,8 +245,8 @@ describe('Parser', function () {
             '</ul>'
           ]
         });
-        expect(parseResult[4].children[1].type).to.equal('tag');
-        expect(parseResult[4].children[1].name).to.equal('subcomponent');
+        expect(parseResult[4].children[1].type).toEqual('tag');
+        expect(parseResult[4].children[1].name).toEqual('subcomponent');
       });
     });
   });
