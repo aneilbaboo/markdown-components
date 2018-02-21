@@ -3,6 +3,19 @@ var path = require('path');
 const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
 var libraryName = 'markdown-components';
 
+const loaders = [
+  {
+    test: /(\.jsx|\.js)$/,
+    loader: 'babel-loader',
+    exclude: /(node_modules|bower_components)/
+  },
+  {
+    test: /(\.jsx|\.js)$/,
+    loader: 'eslint-loader',
+    exclude: /node_modules/
+  }
+];
+
 var webConfig = {
   target: 'web',
   entry: path.resolve(__dirname, 'src/index.js'),
@@ -14,20 +27,7 @@ var webConfig = {
     libraryTarget: 'umd',
     umdNamedDefine: true
   },
-  module: {
-    loaders: [
-      {
-        test: /(\.jsx|\.js)$/,
-        loader: 'babel-loader',
-        exclude: /(node_modules|bower_components)/
-      },
-      {
-        test: /(\.jsx|\.js)$/,
-        loader: 'eslint-loader',
-        exclude: /node_modules/
-      }
-    ]
-  },
+  module: { loaders },
   plugins: [new UglifyJSPlugin({})]
 };
 
@@ -43,20 +43,7 @@ var nodeConfig = {
     libraryTarget: 'umd',
     umdNamedDefine: true
   },
-  module: {
-    loaders: [
-      {
-        test: /(\.jsx|\.js)$/,
-        loader: 'babel-loader',
-        exclude: /(node_modules|bower_components)/
-      },
-      {
-        test: /(\.jsx|\.js)$/,
-        loader: 'eslint-loader',
-        exclude: /node_modules/
-      }
-    ]
-  }
+  module: { loaders }
 };
 
 module.exports = [webConfig, nodeConfig];
