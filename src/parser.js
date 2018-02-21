@@ -19,27 +19,27 @@ export default class Parser {
     return this.content();
   }
 
+  // returns true if a close is encountered
+  tryCapture(capture, closeTest, elements) {
+    // check for closing tag before we capture anything:
+    if (closeTest && this.cursor.capture(closeTest)){
+      return true;
+    } else {
+      var elt = capture();
+      if (elt) {
+        elements.push(elt);
+      }
+    }
+  }
+
   content(closeTag) {
     const closeTest = closeTag && new RegExp(`^</${closeTag}>`, 'i');
     var elements = [];
 
-    // returns true if we encounter closeTag
-    const tryCapture = capture => {
-      // check for closing tag before we capture anything:
-      if (closeTag && this.cursor.capture(closeTest)){
-        return true;
-      } else {
-        var elt = capture();
-        if (elt) {
-          elements.push(elt);
-        }
-      }
-    };
-
     while (!this.cursor.eof) {
       if (
-        tryCapture(()=>this.tag()) ||
-        tryCapture(()=>this.text())
+        this.tryCapture(()=>this.tag(), closeTest, elements) ||
+        this.tryCapture(()=>this.text(), closeTest, elements)
       ) {
         return elements;
       }
