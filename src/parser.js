@@ -61,19 +61,11 @@ export default class Parser {
       const name = rawName.toLowerCase();
 
       if (!endBracket) {
-        error(`Missing end bracket while parsing '<${
-          rawName
-        } ...'`,
-        this.cursor,
-        ErrorType.MissingEndBracket);
+        error(`Missing end bracket while parsing '<${rawName} ...'`, this.cursor, ErrorType.MissingEndBracket);
       }
 
       if (name[0]==='/') {
-        error(
-          `Unexpected closing tag <${rawName}>`,
-          this.cursor,
-          ErrorType.UnexpectedClosingTag
-        );
+        error(`Unexpected closing tag <${rawName}>`, this.cursor, ErrorType.UnexpectedClosingTag);
       }
 
       const selfClosing = (endBracket[1]==='/');
