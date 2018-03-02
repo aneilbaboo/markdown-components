@@ -34,11 +34,12 @@ export default class Renderer {
 
   writeElement(elt, context, stream) {
     const _this = this;
-    const render = function (obj) {
+    const render = function (obj, newContext) {
+      newContext = newContext || context;
       if (isString(obj) || isNumber(obj)) {
         stream.write(obj);
       } else {
-        _this.write(obj, context, stream);
+        _this.write(obj, newContext, stream);
       }
     };
 
@@ -48,7 +49,7 @@ export default class Renderer {
     } else {
       // or a component:
       const component = this.componentFromElement(elt);
-      // inject __name and __children into props
+      // inject special vars into props
       const interpolatedAttributes = Object.assign(
         { __name: elt.name, __children: elt.children },
         interpolateAttributes(elt.attrs, context, _this._interpolator)
@@ -96,7 +97,7 @@ function standardInterpolator(variables, accessor) {
 }
 
 function interpolateAttributes(attrs, context, interpolator) {
-  var props = {};
+  var props = { ...context };
   for (var key in attrs) {
     var value = attrs[key];
     if (isObject(value)) {

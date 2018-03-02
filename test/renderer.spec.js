@@ -21,6 +21,43 @@ describe('Renderer', function () {
       };
     });
 
+    context('context variables', function () {
+      it('should be implicitly available to the component', function() {
+        const renderer = new Renderer({
+          components: {
+            ShowA({ A }, render) {
+              render(`A:${A}\n`);
+            }
+          }
+        });
+        const dom = parse('<ShowA/>');
+        const stream = new streams.WritableStream();
+        renderer.write(dom, { A: 1 }, stream);
+        const result  = stream.toString();
+        expect(result).toEqual(expect.stringContaining('A:1'));
+      });
+
+      it('may be changed during rendering', ()=>{
+        const renderer = new Renderer({
+          components: {
+            Square({ val, __children }, render) {
+              render(`${val}\n`);
+              render(__children, { val: val**2 });
+            }
+          }
+        });
+        const dom = parse('<Square><Square><Square></Square></Square></Square>');
+        const stream = new streams.WritableStream();
+        renderer.write(dom, { val: 2 }, stream);
+        const result  = stream.toString();
+        const lines = result.split('\n');
+        expect(lines[0]).toEqual('2');
+        expect(lines[1]).toEqual('4');
+        expect(lines[2]).toEqual('16');
+        expect(lines[3]).toEqual('');
+      });
+    });
+
     it('should render a float attribute', function () {
       const renderer = new Renderer({
         components: components
