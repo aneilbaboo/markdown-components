@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-import Parser, { DEFAULT_INTERPOLATION_POINT } from '../src/parser';
+import Parser, { DEFAULT_INTERPOLATION_POINT, ATTRIBUTE_RE } from '../src/parser';
 import { markdownItEngine } from '../src/engines';
 import toBeType from 'jest-tobetype';
 expect.extend(toBeType);
@@ -22,6 +22,30 @@ describe('Parser', function () {
       var parser2 = new Parser({ markdownEngine:()=>{} });
       expect(parser1._interpolationPoint).toEqual(DEFAULT_INTERPOLATION_POINT);
       expect(parser2._interpolationPoint).toEqual(DEFAULT_INTERPOLATION_POINT);
+    });
+  });
+
+  context('ATTRIBUTE_RE', function () {
+    // ATTRIBUTE_RE sanity check
+    it('should parse a string attribute', function () {
+      expect(ATTRIBUTE_RE.exec('a="str"')).toBeDefined();
+    });
+
+    it('should parse a float attribute', function () {
+      expect(ATTRIBUTE_RE.exec('a=1.23')).toBeDefined();
+    });
+
+    it('should parse a bool', function () {
+      expect(ATTRIBUTE_RE.exec('a')).toBeDefined();
+    });
+
+    it('should parse a bool assignment', function () {
+      expect(ATTRIBUTE_RE.exec('a=true')).toBeDefined();
+      expect(ATTRIBUTE_RE.exec('a=false')).toBeDefined();
+    });
+
+    it('should parse an interpolation', function () {
+      expect(ATTRIBUTE_RE.exec('a={x}')).toBeDefined();
     });
   });
 
@@ -223,13 +247,47 @@ describe('Parser', function () {
         expect(parseResult[2].name).toEqual('selfclosing');
       });
 
-      it('should parse number, string and interpolated attributes from a component', function () {
-        expect(parseResult[4].type).toEqual('tag');
-        expect(parseResult[4].name).toEqual('mycomponent');
-        expect(parseResult[4].attrs).toEqual({
-          a: 1, b: 'string', c: { type: 'interpolation', accessor: 'x.y' }
+      context('while parsing a component with each type of attribute', function () {
+        let attrs;
+
+        beforeEach(function () {
+          attrs = parseResult[4].attrs;
         });
-        expect(parseResult[4].children).toHaveLength(2);
+
+        it('should parse the element correctly, providing type, name, children and attributes', function () {
+          expect(parseResult[4].type).toEqual('tag');
+          expect(parseResult[4].name).toEqual('mycomponent');
+          expect(parseResult[4].attrs).toBeDefined();
+          expect(parseResult[4].children).toHaveLength(2);
+        });
+
+        it('should parse a number attribute correctly', function () {
+          expect(attrs.a).toBeType('number');
+          expect(attrs.a).toEqual(1);
+        });
+
+        it('should parse a string correctly', function () {
+          expect(attrs.b).toEqual('string');
+        });
+
+        it('should parse an interpolation correctly', function () {
+          expect(attrs.c).toEqual({
+            type: 'interpolation',
+            accessor: 'x.y'
+          });
+        });
+
+        it('should parse an unassigned attribute as boolean true', function () {
+          expect(attrs.d).toEqual(true);
+        });
+
+        it('should parse an true assignment correctly', function () {
+          expect(attrs.e).toEqual(true);
+        });
+
+        it('should parse a false assignment correctly', function () {
+          expect(attrs.f).toEqual(false);
+        });
       });
 
       it('should handle curly and angle escapes', function () {

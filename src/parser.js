@@ -4,6 +4,8 @@ import { isFunction } from 'lodash';
 import { error, ErrorType } from './error';
 
 export const DEFAULT_INTERPOLATION_POINT = '=interpolation-point=';
+export const ATTRIBUTE_RE = /^\s*([^/=<>"'\s]+)\s*(?:=\s*((?:"([^"]*)")|([-+]?[0-9]*\.?[0-9]+)|(?:{([^}]*)})|(true|false)))?/;
+
 export default class Parser {
   constructor({ markdownEngine, interpolationPoint, indentedMarkdown }) {
     if (!isFunction(markdownEngine)) {
@@ -208,21 +210,25 @@ export default class Parser {
   }
 
   captureAttributes() {
-    const attribRE = /^\s*([^=<>"'\s]+)\s*=\s*((?:"([^"]*)")|([-+]?[0-9]*\.?[0-9]+)|(?:{([^}]*)}))/;
     var attribs = {};
     var match;
 
-    while (match = this.cursor.capture(attribRE)) {
+    while (match = this.cursor.capture(ATTRIBUTE_RE)) {
+      debugger;
       var variable = match[1];
       if (match[3]) { // string
         attribs[variable] = match[3];
       } else if (match[4]) { // number
         attribs[variable] = parseFloat(match[4]);
-      } else { // at this point it must be interpolation
+      } else if (match[5]){ // interpolation
         attribs[variable] = {
           type: 'interpolation',
           accessor: match[5].trim(' ')
         };
+      } else if (match[6]) {
+        attribs[variable] = match[6]==='true' ? true : false;
+      } else { // must be boolean true
+        attribs[variable] = true;
       }
     }
     return attribs;
