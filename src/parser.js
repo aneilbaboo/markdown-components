@@ -1,16 +1,16 @@
 import Cursor from './cursor';
-import crypto from 'crypto';
 import streams from 'memory-streams';
 import { isFunction } from 'lodash';
 import { error, ErrorType } from './error';
 
+export const DEFAULT_INTERPOLATION_POINT = '=interpolation-point=';
 export default class Parser {
   constructor({ markdownEngine, interpolationPoint, indentedMarkdown }) {
     if (!isFunction(markdownEngine)) {
       throw new Error('Invalid markdownEngine');
     }
     this._markdownEngine = markdownEngine;
-    this._interpolationPoint = interpolationPoint || crypto.randomBytes(32).toString('hex');
+    this._interpolationPoint = interpolationPoint || DEFAULT_INTERPOLATION_POINT;
     this._indentedMarkdown = indentedMarkdown;
 }
 
