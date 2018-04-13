@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-import Parser from '../src/parser';
+import Parser, { DEFAULT_INTERPOLATION_POINT } from '../src/parser';
 import { markdownItEngine } from '../src/engines';
 import toBeType from 'jest-tobetype';
 expect.extend(toBeType);
@@ -20,9 +20,8 @@ describe('Parser', function () {
     it('should generate a random interpolationPoint if none is given', function () {
       var parser1 = new Parser({ markdownEngine:()=>{} });
       var parser2 = new Parser({ markdownEngine:()=>{} });
-      expect(parser1._interpolationPoint).toHaveLength(64);
-      expect(parser2._interpolationPoint).toHaveLength(64);
-      expect(parser1._interpolationPoint).not.toEqual(parser2._interpolationPoint);
+      expect(parser1._interpolationPoint).toEqual(DEFAULT_INTERPOLATION_POINT);
+      expect(parser2._interpolationPoint).toEqual(DEFAULT_INTERPOLATION_POINT);
     });
   });
 
