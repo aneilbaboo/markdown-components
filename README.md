@@ -170,7 +170,7 @@ Returns a JSON object representing the parsed markdown.
 ```javascript
 import { Parser, showdownEngine } from 'markdown-components';
 var parser = new Parser({markdownEngine:}); // use showdownjs
-var parsedElements = parser.parse(`<MyComponent a={ x.y.z } b=123 c="hello">
+var parsedElements = parser.parse(`<MyComponent a={ x.y.z } b=123 c="hello" d e=false >
 # User likes { user.color } color
 </MyComponent>
 `);
@@ -183,7 +183,9 @@ var parsedElements = parser.parse(`<MyComponent a={ x.y.z } b=123 c="hello">
 //     attribs: {
 //       a: { accessor: "x.y.z" },
 //       b: 123,
-//       c: "hello"
+//       c: "hello",
+//       d: true,
+//       e: false
 //     }
 //     children: [
 //       {
@@ -198,6 +200,16 @@ var parsedElements = parser.parse(`<MyComponent a={ x.y.z } b=123 c="hello">
 //   }
 // ]
 ```
+
+#### Attribute types
+
+Attributes can be ints, floats, strings, booleans and interpolated values.
+
+```html
+<MyComponent a=1 b=1.2 c="hello" d e=true f=false />
+```
+
+Note: the `d` attribute will be `true`.
 
 ### Renderer
 
