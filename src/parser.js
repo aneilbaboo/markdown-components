@@ -2,9 +2,10 @@ import Cursor from './cursor';
 import streams from 'memory-streams';
 import { isFunction } from 'lodash';
 import { error, ErrorType } from './error';
+import { OpType } from './evaluator';
 
 export const DEFAULT_INTERPOLATION_POINT = '=interpolation-point=';
-export const ATTRIBUTE_RE = /^\s*([^/=<>"'\s]+)\s*(?:=\s*((?:"([^"]*)")|([-+]?[0-9]*\.?[0-9]+)|(?:{([^}]*)})|(true|false)))?/;
+export const ATTRIBUTE_RE = /^\s*([^/=<>"'\s]+)\s*(?:=\s*((?:"([^"]*)")|([-+]?[0-9]*\.?[0-9]+)|((?=\{))|(true|false)))?/;
 
 export default class Parser {
   constructor({ markdownEngine, interpolationPoint, indentedMarkdown }) {
@@ -110,6 +111,9 @@ export default class Parser {
     return blocks.filter(block=>block!=='');
   }
 
+  //
+  // Markdown block parser
+  //
   renderMarkdownBlocks(textBlocks) {
     const textWithInterpolationPoints = textBlocks.join('');
     const stream = new streams.WritableStream();
@@ -118,40 +122,6 @@ export default class Parser {
     const processedTextWithInterpolationPoints = stream.toString();
     const processedTextBlocks = processedTextWithInterpolationPoints.split(this._interpolationPoint);
     return processedTextBlocks;
-  }
-
-  captureTextAndInterpolations() {
-    const interpolationElements = [];
-    const textBlocks = [];
-    const captureAndStoreInterpolation = () => {
-      var interpolationElement = this.cursor.capture(/^{\s*([^}]*)}/);
-      if (interpolationElement) {
-        interpolationElements.push({
-          type: 'interpolation',
-          accessor: interpolationElement[1].trim(' ')
-        });
-        textBlocks.push(this._interpolationPoint);
-        return true;
-      }
-    };
-
-    // this.cursor may start with an interpolation...
-    captureAndStoreInterpolation();
-
-    var rawText;
-    var startLine = this.cursor.lineNumber;
-    while (rawText = this.captureTextUntilBreak()) {
-      if (this._indentedMarkdown) {
-        // if parser allows indented markdown, remove the indent:
-        textBlocks.push(this.removeIndent(rawText, startLine));
-      } else {
-        textBlocks.push(rawText);
-      }
-      captureAndStoreInterpolation();
-      startLine = this.cursor.lineNumber;
-    }
-
-    return [textBlocks, interpolationElements];
   }
 
   removeIndent(text) {
@@ -214,17 +184,13 @@ export default class Parser {
     var match;
 
     while (match = this.cursor.capture(ATTRIBUTE_RE)) {
-      debugger;
       var variable = match[1];
       if (match[3]) { // string
         attribs[variable] = match[3];
       } else if (match[4]) { // number
         attribs[variable] = parseFloat(match[4]);
-      } else if (match[5]){ // interpolation
-        attribs[variable] = {
-          type: 'interpolation',
-          accessor: match[5].trim(' ')
-        };
+      } else if (match[5] === ''){ // interpolation start
+        attribs[variable] = this.captureInterpolation();
       } else if (match[6]) {
         attribs[variable] = match[6]==='true' ? true : false;
       } else { // must be boolean true
@@ -232,6 +198,139 @@ export default class Parser {
       }
     }
     return attribs;
+  }
+
+  //
+  // Text and Interpolations
+  //
+  captureTextAndInterpolations() {
+    const interpolationElements = [];
+    const textBlocks = [];
+    const captureAndStoreInterpolation = () => {
+      const interpolation = this.captureInterpolation();
+      if (interpolation) {
+        interpolationElements.push(interpolation);
+        textBlocks.push(this._interpolationPoint);
+      }
+      return true;
+    };
+
+    // this.cursor may start with an interpolation...
+    captureAndStoreInterpolation();
+
+    var rawText;
+    var startLine = this.cursor.lineNumber;
+    while (rawText = this.captureTextUntilBreak()) {
+      if (this._indentedMarkdown) {
+        // if parser allows indented markdown, remove the indent:
+        textBlocks.push(this.removeIndent(rawText, startLine));
+      } else {
+        textBlocks.push(rawText);
+      }
+      captureAndStoreInterpolation();
+      startLine = this.cursor.lineNumber;
+    }
+
+    return [textBlocks, interpolationElements];
+  }
+
+  //
+  // Interpolation Parsing
+  //
+  captureInterpolation() {
+    if (this.cursor.capture(/^\s*\{/)) {
+      const result = {
+        type: 'interpolation',
+        expression: this.captureInterpolationExpression(/^\s*((?=\}))/)
+      };
+      this.cursor.capture(/^\s*\}/); // consume the final }
+      return result;
+    }
+  }
+
+  captureInterpolationExpression(terminator) {
+    let lhs;
+    while (!this.cursor.capture(terminator)) {
+      this.cursor.capture(/^\s*/);
+      lhs = this.captureInterpolationTerm(lhs, terminator);
+    }
+    return lhs;
+  }
+
+  captureInterpolationTerm(lhs, terminator) {
+    const expressionMatch = this.cursor.capture(
+      /^\s*(and\b|or\b)|(not\b)|(\()|([a-zA-Z][.\w]*)\s*(\()?|(\"[^\"]*\"|\'[^\']*\'|true|false|[+-]?(?:[0-9]*[.])?[0-9]+)/i
+    );
+    const capture = expressionMatch && expressionMatch[0].trim(' ');
+    if (expressionMatch[1]) { // binary operator
+      return this.captureInterpolationBinaryOperator(expressionMatch[1], lhs, terminator);
+    } else if (lhs) {
+      error(`Expecting "and" or "or" but received "${capture}"`, this.cursor, ErrorType.UnexpectedExpression);
+    } else if (expressionMatch[4]) {
+      return this.captureSymbolExpression(expressionMatch);
+    } else if (expressionMatch[6]) { // scalar
+      return this.captureScalarExpression(expressionMatch);
+    } else if (expressionMatch[2]) { // not
+      return this.captureInterpolationUnaryOperator(expressionMatch[2]);
+    } else if (expressionMatch[3]) { // group start: ( ...
+      return this.captureInterpolationGroup();
+    }
+    error('Invalid expression', this.cursor, ErrorType.InvalidExpression);
+  }
+
+  captureSymbolExpression(expressionMatch) {
+    const symbol = expressionMatch[4];
+    if (expressionMatch[5]) { // funcall
+      const location = { lineNumber: this.cursor.lineNumber, columnNumber: this.cursor.columnNumber };
+      return [OpType.funcall, symbol, location, ...this.captureInterpolationFunctionArguments(symbol)];
+    } else { // value
+      return [OpType.accessor, symbol];
+    }
+  }
+
+  captureScalarExpression(expressionMatch) {
+    try {
+      return [OpType.scalar, JSON.parse(expressionMatch[6])];
+    } catch (e) {
+      error(`Invalid expression ${expressionMatch[6]}`, this.cursor, ErrorType.InvalidExpression);
+    }
+  }
+
+  captureInterpolationBinaryOperator(binOp, lhs, terminator) {
+    if (!lhs) {
+      error(`Unexpected operator ${expressionMatch[1]}`, this.cursor, ErrorType.UnexpectedOperator);
+    } else {
+      return [binOp, lhs, this.captureInterpolationExpression(terminator)];
+    }
+  }
+
+  captureInterpolationUnaryOperator(op, terminator) {
+    return [op, this.captureInterpolationTerm(null, terminator)];
+  }
+
+  captureInterpolationGroup() {
+    return this.captureInterpolationExpression(/^\s*\)/);
+  }
+
+  captureInterpolationFunctionArguments(symbol) {
+    const args = [];
+    if (!this.cursor.capture(/^\s*\)/)) {
+      while (true) {
+        const arg = this.captureInterpolationExpression(/^\s*((?=\,|\)))/);
+        if (arg) {
+          args.push(arg);
+        } else {
+          error(`Invalid argument to ${symbol}`, this.cursor, 'InvalidArgument');
+        }
+        const argNextMatch = this.cursor.capture(/^\s*(\)|\,)/);
+        if (!argNextMatch) {
+          error(`Expecting , or ) in call to ${symbol}`, this.cursor, 'InvalidArgument');
+        } else if (argNextMatch[1]) { // closing paren )
+          break;
+        } // else found comma - continue processing args
+      }
+    }
+    return args;
   }
 }
 

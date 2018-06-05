@@ -19,7 +19,7 @@ describe('evaluator', function () {
   });
 
   it('should evaluate a function call with scalar arguments', function () {
-    expect(evaluate(['funcall', 'mul', ['scalar', 2], ['scalar', 3]], {}, {
+    expect(evaluate(['funcall', 'mul', {}, ['scalar', 2], ['scalar', 3]], {}, {
       mul(ctx, x, y) {
         return x * y;
       }
@@ -27,7 +27,7 @@ describe('evaluator', function () {
   });
 
   it('should evaluate a function call with scalar, accessor arguments', function () {
-    expect(evaluate(['funcall', 'mul', ['scalar', 2], ['accessor', 'a.b']], {
+    expect(evaluate(['funcall', 'mul', {}, ['scalar', 2], ['accessor', 'a.b']], {
       a: { b: 3 }
     }, {
       mul(ctx, x, y) {
@@ -37,13 +37,21 @@ describe('evaluator', function () {
   });
 
   it('should evaluate a function call with funcall and scalar arguments', function () {
-    expect(evaluate(['funcall', 'mul',
+    expect(evaluate(['funcall', 'mul', {},
     ['scalar', 2],
-    ['funcall', 'mul', ['scalar', 2], ['scalar', 3]]], {}, {
+    ['funcall', 'mul', {}, ['scalar', 2], ['scalar', 3]]], {}, {
       mul(ctx, x, y) {
         return x * y;
       }
     })).toEqual(12);
+  });
+
+  it('should throw an error if the function is not defined', function () {
+    expect(() => evaluate(['funcall', 'mul',
+      { lineNumber: 5, columnNumber: 7 },
+      ['scalar', 2],
+      ['funcall', 'mul', {}, ['scalar', 2], ['scalar', 3]]], {}, {})
+    ).toThrow(/Function not defined \(mul\).*5.*7/);
   });
 
   it('should evaluate and logic correctly', function () {

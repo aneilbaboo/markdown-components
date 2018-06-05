@@ -11,5 +11,9 @@ export const ErrorType = {
   NoClosingTag: 'NoClosingTag',
   MissingEndBracket: 'MissingEndBracket',
   UnexpectedClosingTag: 'UnexpectedClosingTag',
-  BadIndentation: 'BadIndentation'
+  BadIndentation: 'BadIndentation',
+  InvalidExpression: 'InvalidExpression',
+  InvalidArgument: 'InvalidArgument',
+  UnexpectedOperator: 'UnexpectedOperator',
+  ValueUndefined: 'ValueUndefined'
 };
