@@ -44,7 +44,7 @@ jobs:
           name: Run Tests and Code Coverage
           command: |
             ./cc-test-reporter before-build
-            yarn lint && yarn test
+            yarn lint && yarn test --coverage
             ./cc-test-reporter after-build -t lcov --exit-code $?
 
 

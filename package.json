@@ -14,6 +14,7 @@
     "prepare": "yarn run build",
     "lint": "eslint src/**/*.js test/**/*.js",
     "test": "cross-env NODE_ENV=test jest",
+    "test-with-coverage": "cross-env NODE_ENV=test jest --collectCoverage",
     "watch": "cross-env NODE_ENV=test jest --watch"
   },
   "dependencies": {
@@ -53,7 +54,6 @@
     "setupFiles": [
       "jest-plugin-context/setup"
     ],
-    "collectCoverage":  true,
     "coverageDirectory": "coverage",
     "coverageReporters": [
       "html",
