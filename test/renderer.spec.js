@@ -98,7 +98,6 @@ describe('Renderer', function () {
       const renderer = new Renderer({
         components: components
       });
-      debugger;
       const dom = parse('<SimpleComponent a={ x.y } />');
       const stream = new streams.WritableStream();
       renderer.write(dom, { x: { y: 'xyz' }}, stream);

@@ -181,15 +181,54 @@ describe('Parser', function () {
       });
     });
 
-    it('should parse interpolation only', function () {
-      var elements = parse('{ someVar }');
-      expect(elements).toBeType('array');
-      expect(elements[0].type).toEqual('text');
-      expect(elements[0].blocks).toEqual([
-        '<p>',
-        { type: 'interpolation', accessor: 'someVar' },
-        '</p>'
-      ]);
+    context('interpolation', function () {
+      it('should parse interpolation with an accessor', function () {
+        var elements = parse('{ someVar }');
+        expect(elements).toBeType('array');
+        expect(elements[0].type).toEqual('text');
+        expect(elements[0].blocks).toEqual([
+          '<p>',
+          { type: 'interpolation', expression: ['accessor', 'someVar'] },
+          '</p>'
+        ]);
+      });
+
+      it('should parse interpolation with scalar', function () {
+        var elements = parse('{ "abc" }');
+        expect(elements).toBeType('array');
+        expect(elements[0].type).toEqual('text');
+        expect(elements[0].blocks).toEqual([
+          '<p>',
+          { type: 'interpolation', expression: ['scalar', 'abc'] },
+          '</p>'
+        ]);
+      });
+
+      it('should parse interpolation with a function call', function () {
+        var elements = parse('{ foo("bar") }');
+        expect(elements).toBeType('array');
+        expect(elements[0].type).toEqual('text');
+        expect(elements[0].blocks).toEqual([
+          '<p>',
+          {
+            type: 'interpolation',
+            expression: ['funcall', 'foo', { lineNumber: 1, columnNumber: 7 }, ['scalar', 'bar']]
+          },
+          '</p>'
+        ]);
+      });
+
+      it('should parse interpolation with a logic expression', function () {
+        var elements = parse('{ foo("bar") and "hello" or x.y }');
+        expect(elements).toBeType('array');
+        expect(elements[0].type).toEqual('text');
+        const funcallBlock = elements[0].blocks[1];
+        expect(funcallBlock.expression).toEqual([
+          'and',
+          ['funcall', 'foo', { lineNumber: 1, columnNumber: 7 }, ['scalar','bar']],
+          ['or',['scalar','hello'],['accessor','x.y']]
+        ]);
+      });
     });
 
     context('with bad input', function () {
@@ -231,7 +270,7 @@ describe('Parser', function () {
         expect(parseResult[0].type).toEqual('text');
         expect(parseResult[0].blocks).toEqual([
           '<h1>heading1</h1>\n<p>Text after and interpolation ',
-          { type: 'interpolation', accessor: 'x.y' },
+          { type: 'interpolation', expression: ['accessor', 'x.y'] },
           ' heading1</p>'
         ]);
       });
@@ -273,7 +312,7 @@ describe('Parser', function () {
         it('should parse an interpolation correctly', function () {
           expect(attrs.c).toEqual({
             type: 'interpolation',
-            accessor: 'x.y'
+            expression: ['accessor', 'x.y']
           });
         });
 
