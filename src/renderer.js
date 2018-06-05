@@ -1,6 +1,5 @@
 import { isObject, isArray, isString } from 'lodash';
 import { isNumber } from 'util';
-import assert from 'assert';
 import { evaluate } from './evaluator';
 
 /**
