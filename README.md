@@ -171,7 +171,7 @@ Returns a JSON object representing the parsed markdown.
 import { Parser, showdownEngine } from 'markdown-components';
 var parser = new Parser({markdownEngine:}); // use showdownjs
 var parsedElements = parser.parse(`<MyComponent a={ x.y.z } b=123 c="hello" d e=false >
-# User likes { user.color } color
+# User likes { user.color or "no" } color
 </MyComponent>
 `);
 // =>
@@ -181,7 +181,10 @@ var parsedElements = parser.parse(`<MyComponent a={ x.y.z } b=123 c="hello" d e=
 //     name: 'mycomponent',
 //     rawName: 'MyComponent',
 //     attribs: {
-//       a: { accessor: "x.y.z" },
+//       a: {
+//            type: "interpolation",
+//            expression: ["accessor", "x.y.z"]
+//       },
 //       b: 123,
 //       c: "hello",
 //       d: true,
@@ -192,7 +195,9 @@ var parsedElements = parser.parse(`<MyComponent a={ x.y.z } b=123 c="hello" d e=
 //         type: "text",
 //         blocks: [
 //           "<h1>User likes ",
-//           { type: "interpolation", accessor: "user.color" }
+//           { type: "interpolation",
+//             expression: ["or", ["accessor", "user.color"], ["scalar", "no"]]
+//           },
 //           "color</h1>"
 //         ]
 //       }
@@ -286,23 +291,31 @@ Because the component has responsibility for rendering `__children`, you can man
 </Switch>
 ```
 
-### Interpolator
+### Interpolation Functions
 
-An optional function which returns a value given the context and an accessor expression (the value contained between the braces in `#{...}`):
+Interpolation blocks can contain simple expressions including function calls:
 
-The default interpolator has behavior similar to lodash's get. It safely traverses object using a dot-separated accessor.
+```js
+<Component value={ not (foo(true)) and add(123, -123) or x.y } />
+```
 
-For example, given a context of `{ a: {b: 9 }}`, `{ a.b }` provides an interpolated value of `9`, and `{ x.y.z }` is `undefined`.
-
-```javascript
-function myInterpolator(context, accessor) {
-  return context[accessor];
-}
-
-toHTML({
-  interpolator: myInterpolator,
-  ...
+Interpolation functions are provided to the renderer constructor:
+```js
+new Renderer({
+  components: {
+    Component: (context, renderer) => {...}
+  },
+  functions: {
+    foo(context, myBool) { return myBool; },
+    add(context, a, b) { return a+b; }
+  }
 });
+```
+
+Given the above code, the `value` attribute of `Component` will be the value of x.y:
+
+```js
+value={ not (true) and 0 or x.y }
 ```
 
 ### Markdown Engine
