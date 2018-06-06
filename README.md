@@ -6,12 +6,13 @@ Add custom React-like components to Markdown which can be safely used by end-use
 
 E.g.,
 ```html
-<Box color={user.favoriteColor} lineWidth=3>
+<# A Box which defaults to blue if user has no favorite color #>
+<Box color={user.favoriteColor or "blue"} lineWidth=3>
   ## subheading
   * listElement1
   * listElement2
   [google](https://google.com)
-  <Box color=blue>Box in box!</Box>
+  <Box color="red">Box in box!</Box>
   _more_ markdown
 </Box>
 ```
@@ -47,7 +48,7 @@ var customizedMarkdown = `
 Custom components:
 <Box lineSize=2 color={ user.favoriteColor }>
   Can contain...
-  # Markdown with interpolation:
+  # Markdown with interpolated expressions:
   This box should be *{ user.favoriteColor }*
   And the _markdown_ can contain custom components:
   <Box lineSize=1 color="red">
@@ -115,9 +116,9 @@ Markdown components provides a content authoring language with custom components
 | nesting   |  yes        | no                     | yes                 |
 | HOCs      |  yes        | no                     | yes                 |
 
-JSX-markdown libraries aren't suitable because React interpolation expressions are Javascript. I.e., you'd need to eval user-generated javascript either on your server or another user's browser. You could try evaluating such code in a sandboxed environment, but it's inefficient and asynchronous. The need for asynchronous evaluation rules out using a sandbox like [jailed](https://github.com/asvd/jailed) in a React client, since React rendering requires synchronous execution.
+JSX-markdown libraries aren't suitable because React interpolated expressions are Javascript. I.e., you'd need to eval user-generated javascript either on your server or another user's browser. You could try evaluating such code in a sandboxed environment, but it's inefficient and asynchronous. The need for asynchronous evaluation rules out using a sandbox like [jailed](https://github.com/asvd/jailed) in a React client, since React rendering requires synchronous execution.
 
-In this package, interpolation expressions, like `{ a.b }`, are not evaluated, so there is no script injection vulnerability, and inteprolation is a simple synchronous function. End-users only have access to variables you provide in a context object.
+In this package, expressions, like `{ a.b }` or `{ foo(a) }` are restricted to a context object and a set of developer defined functions, so there is no script injection vulnerability. Authors of this markdown work inside a developer-defined sandbox.
 
 ## API
 
@@ -125,7 +126,7 @@ In this package, interpolation expressions, like `{ a.b }`, are not evaluated, s
 
 Easy one step method for generating HTML.
 
-Parses and renders Markdown with components to HTML, interpolating context variables.
+Parses and renders Markdown with components to HTML.
 
 ```javascript
 // requires: npm install markdown-it
@@ -208,13 +209,13 @@ var parsedElements = parser.parse(`<MyComponent a={ x.y.z } b=123 c="hello" d e=
 
 #### Attribute types
 
-Attributes can be ints, floats, strings, booleans and interpolated values.
+Attributes can be ints, floats, strings, booleans and expressions.
 
 ```html
 <MyComponent a=1 b=1.2 c="hello" d e=true f=false />
 ```
 
-Note: the `d` attribute will be `true`.
+Note: the `d` attribute represents a `true` boolean.
 
 ### Renderer
 
@@ -223,17 +224,22 @@ A class representing the rendering logic.
 #### constructor arguments
 
 * `components` (required)
-  An object of key:function pairs. Where the key is the componentName (matched case-insensitively with tags in the input text), and function is a function which takes parsed elements as input, and uses the render function to write HTML.
-  `({__name, __children, ...attrs}, render)=>{}`
+  An object of key:function pairs. Where the key is the componentName (matched case-insensitively with tags in the input text), and function is a function which takes parsed elements as input, and uses the render function to write HTML:
+
+  ```js
+  ({__name, __children, ...attrs}, render)=>{}
+  ```
 * `defaultComponent` (optional)
   A function called when a matching component cannot be found for a tag. Same function signature as a component.
-* `interpolator` (optional)
-  Takes the context provided to `#write` or `toHTML` and the string inside a `{ }` block, and returns a new value. The default interpolator provides a simple dot-accessor syntax for objects.
-  `standardInterpolator({a: {b: 123}}, "a.b") // => 123`
+* `functions` (optional)
+  Functions which may be used in interpolation expressions, of the form:
+  ```js
+  (context, args) => value
+  ```
 
 #### #write
 
-Writes an element (e.g., the result from Parser.parse) to `stream`, interpolating variables from the `context`:
+Writes an element (e.g., the result from Parser.parse) to `stream`, and uses the `context` when evaluating expressions:
 
 ```javascript
 renderer.write(elements, context, stream);
